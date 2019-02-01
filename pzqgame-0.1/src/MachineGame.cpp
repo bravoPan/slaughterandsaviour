@@ -54,6 +54,13 @@ void MachineGameStateMainmenu::OnKeyUp(const SDL_KeyboardEvent &ev){
 }
 
 void MachineGameStateMainmenu::OnLogic(){
+  if(currInnerState == INNERSTATE_BEGIN){
+    ++beginAnimFrame;
+    GUImodified = true;
+    if(beginAnimFrame == 180){currInnerState = INNERSTATE_NORMAL;}
+    return;
+  }
+  
   for(int i = 0;i < 8;++i){
     for(int j = 0;j < 8;++j){
       if(inAnim[i][j]){
@@ -102,6 +109,8 @@ void MachineGameStateMainmenu::OnLogic(){
       if(eliminable[i][j]){
 	AddTempBlock(board[i][j],i,j,8,8,elimSpeed);
         board[i][j] = -1;
+	currScore += 20;
+	GUImodified = true;
       }
     }
   }
@@ -109,6 +118,7 @@ void MachineGameStateMainmenu::OnLogic(){
   for(int i = 6;i >= 0;--i){
     for(int j = 0;j < 8;++j){
       if(inAnim[i][j] || board[i][j] == -1){continue;}
+      if(inAnim[i + 1][j] && repl[i + 1][j] != -1){continue;}
       if(board[i + 1][j] == -1 || falling[i + 1][j]){
 	falling[i][j] = true;
 	inAnim[i][j] = true;
@@ -149,7 +159,7 @@ void MachineGameStateMainmenu::OnLogic(){
     }
   }
 
-  if(upPressed && posX >= 1 && !inAnim[posX][posY] && !inAnim[posX - 1][posY]){
+  if(upPressed && posX >= 1 && !inAnim[posX][posY] && !inAnim[posX - 1][posY] && board[posX - 1][posY] != -1){
     inAnim[posX][posY] = true;
     dest[posX][posY][0] = posX - 1;
     dest[posX][posY][1] = posY;
@@ -164,7 +174,7 @@ void MachineGameStateMainmenu::OnLogic(){
     repl[posX - 1][posY] = board[posX][posY];
     --posX;
   }
-  if(downPressed && posX <= 6 && !inAnim[posX][posY] && !inAnim[posX + 1][posY]){
+  if(downPressed && posX <= 6 && !inAnim[posX][posY] && !inAnim[posX + 1][posY]  && board[posX + 1][posY] != -1){
     inAnim[posX][posY] = true;
     dest[posX][posY][0] = posX + 1;
     dest[posX][posY][1] = posY;
@@ -179,7 +189,7 @@ void MachineGameStateMainmenu::OnLogic(){
     repl[posX + 1][posY] = board[posX][posY];
     ++posX;
   }
-  if(leftPressed && posY >= 1 && !inAnim[posX][posY] && !inAnim[posX][posY - 1]){
+  if(leftPressed && posY >= 1 && !inAnim[posX][posY] && !inAnim[posX][posY - 1]  && board[posX][posY - 1] != -1){
     inAnim[posX][posY] = true;
     dest[posX][posY][0] = posX;
     dest[posX][posY][1] = posY - 1;
@@ -194,7 +204,7 @@ void MachineGameStateMainmenu::OnLogic(){
     repl[posX][posY - 1] = board[posX][posY];
     --posY;
   }
-  if(rightPressed && posY <= 6 && !inAnim[posX][posY] && !inAnim[posX][posY + 1]){
+  if(rightPressed && posY <= 6 && !inAnim[posX][posY] && !inAnim[posX][posY + 1]  && board[posX][posY + 1] != -1){
     inAnim[posX][posY] = true;
     dest[posX][posY][0] = posX;
     dest[posX][posY][1] = posY + 1;
@@ -213,6 +223,8 @@ void MachineGameStateMainmenu::OnLogic(){
 
 void MachineGameStateMainmenu::OnRender(){
   glClear(GL_COLOR_BUFFER_BIT|GL_STENCIL_BUFFER_BIT);
+  glEnable(GL_STENCIL_TEST);
+  renderer.DrawStencil(723,723 + 9 * 106,964 - 9 * 106,964);
   renderer.UseSpriteAtlas(globalState -> spriteAtlasID);
 
   for(int i = 0;i < 8;++i){
@@ -222,15 +234,13 @@ void MachineGameStateMainmenu::OnRender(){
 	renderer.DrawQuad(723 + 106 * j,723 + 106 * (j + 1),964 - 106 * (i + 1),964 - 106 * i,board[i][j]);
       } else {
 	float p,q,r,s;
-	float x,y,z,w;
+	float x,y;
 	p = 723 + 106 * j;
 	q = 964 - 106 * (i + 1);
 	r = 723 + 106 * dest[i][j][1];
 	s = 964 - 106 * (dest[i][j][0] + 1);
 	x = (p * (totalFrame[i][j] - animFrame[i][j])) / totalFrame[i][j] + (r * animFrame[i][j]) / totalFrame[i][j];
 	y = (q * (totalFrame[i][j] - animFrame[i][j])) / totalFrame[i][j] + (s * animFrame[i][j]) / totalFrame[i][j];
-	//z = (p * animFrame) / 6 + (r * (6 - animFrame)) / 6;
-	//w = (q * animFrame) / 6 + (s * (6 - animFrame)) / 6;
 	renderer.DrawQuad(x,x + 106,y,y + 106,board[i][j]);
       }
     }
@@ -250,13 +260,30 @@ void MachineGameStateMainmenu::OnRender(){
   }
   
   renderer.Flush();
+  glDisable(GL_STENCIL_TEST);
   renderer.BeginCairo();
   if(GUImodified){
     cairo_t *cr = renderer.GUIcr;
+    PangoLayout *textLayout = renderer.pangoLayout;
     cairo_set_operator(cr,CAIRO_OPERATOR_SOURCE);
     cairo_set_source_rgba(cr,0.0,0.0,0.0,0.0);
     cairo_rectangle(cr,0,0,renderer.winW,renderer.winH);
     cairo_fill(cr);
+    if(currInnerState == INNERSTATE_BEGIN){
+      cairo_move_to(cr,25,25);
+      cairo_set_source_rgba(cr,0.0,1.0,0.0,1.0);
+      char beginText[64];
+      sprintf(beginText,"Ready? %d",3 - beginAnimFrame / 60);
+      pango_layout_set_text(textLayout,beginText,-1);
+      pango_cairo_show_layout(cr,textLayout);
+    } else {
+      char scoreText[64];
+      sprintf(scoreText,"Current Score: %d",currScore);
+      cairo_move_to(cr,25,25);
+      cairo_set_source_rgba(cr,0.0,1.0,0.0,1.0);
+      pango_layout_set_text(textLayout,scoreText,-1);
+      pango_cairo_show_layout(cr,textLayout);
+    }
   }
   renderer.EndCairo(GUImodified);
   GUImodified = false;
@@ -284,7 +311,7 @@ MachineGame::MachineGame(){
   currState = new MachineGameStateMainmenu(&globalState);
 }
 
-MachineGameStateMainmenu::MachineGameStateMainmenu(GameGlobalState * const globalState) : swapSpeed(10),elimSpeed(25){
+MachineGameStateMainmenu::MachineGameStateMainmenu(GameGlobalState * const globalState) : swapSpeed(6),elimSpeed(15){
   GUImodified = true;
   this -> globalState = globalState;
   posX = posY = 0;
@@ -302,7 +329,9 @@ MachineGameStateMainmenu::MachineGameStateMainmenu(GameGlobalState * const globa
 
   for(int i = 0;i < 128;++i){tempBlockUsed[i] = false;}
 
-  currInnerState = INNERSTATE_NORMAL;
+  currInnerState = INNERSTATE_BEGIN;
+  beginAnimFrame = 0;
+  currScore = 0;
 }
 
 void MachineGame::RunGameLoop(){

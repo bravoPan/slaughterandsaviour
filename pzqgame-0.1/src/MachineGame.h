@@ -14,7 +14,8 @@ struct MachineGameStateBase{
 struct MachineGameStateMainmenu : MachineGameStateBase{
   enum MainmenuInnerState{
 			  INNERSTATE_NORMAL,
-			  INNERSTATE_ANIM
+			  INNERSTATE_BEGIN,
+			  INNERSTATE_MENU
   };
 
   MainmenuInnerState currInnerState;
@@ -26,10 +27,12 @@ struct MachineGameStateMainmenu : MachineGameStateBase{
   void OnLogic();
   void OnRender();
   void AddTempBlock(int blockID,int beginPosX,int beginPosY,int endPosX,int endPosY,int totalFrame);
+  
   GameGlobalState * globalState;
   bool GUImodified;
   int posX,posY;
   int newPosX,newPosY;
+  
   MachineGameStateMainmenu(GameGlobalState * const globalState);
 
   int board[8][8];
@@ -46,6 +49,9 @@ struct MachineGameStateMainmenu : MachineGameStateBase{
   bool tempBlockUsed[128];
 
   const int swapSpeed,elimSpeed;
+  int currScore;
+
+  int beginAnimFrame;
 };
 
 struct MachineGame{

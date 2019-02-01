@@ -66,8 +66,8 @@ void Renderer::Initialize(){
   glStencilMask(0x00);
   glStencilOp(GL_REPLACE,GL_KEEP,GL_KEEP);
 
-  //FcConfigAppFontAddFile(FcConfigGetCurrent(),(const FcChar8*)"Hack-Regular.ttf");
-  //pangoDesc = pango_font_description_from_string("Hack Regular 16");
+  FcConfigAppFontAddFile(FcConfigGetCurrent(),(const FcChar8*)"NotoSans-Regular.ttf");
+  pangoDesc = pango_font_description_from_string("Noto Sans Regular 36");
 }
 
 int Renderer::RegisterSpriteAtlas(const char *filename,int rows,int columns){
@@ -147,13 +147,13 @@ void Renderer::UseSpriteAtlas(int spriteAtlasID){
 void Renderer::BeginCairo(){
   //glBindTexture(GL_TEXTURE_2D,emptyTexture);
   GUIcr = cairo_create(GUIsurface);
-  //pangoLayout = pango_cairo_create_layout(GUIcr);
-  //pango_layout_set_font_description(pangoLayout,pangoDesc);
+  pangoLayout = pango_cairo_create_layout(GUIcr);
+  pango_layout_set_font_description(pangoLayout,pangoDesc);
 }
 
 void Renderer::EndCairo(bool modified){
-  //g_object_unref(pangoLayout);
-  //pangoLayout = NULL;
+  g_object_unref(pangoLayout);
+  pangoLayout = NULL;
   cairo_destroy(GUIcr);
   GUIcr = NULL;
   //cairo_gl_surface_swapbuffers(GUIsurface);

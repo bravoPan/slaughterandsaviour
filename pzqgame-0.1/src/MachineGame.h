@@ -7,24 +7,29 @@
 struct MachineGameStateBase{
   virtual void OnKeyDown(const SDL_KeyboardEvent &ev){return;}
   virtual void OnKeyUp(const SDL_KeyboardEvent &ev){return;}
-  virtual void OnLogic(){return;}
+  virtual int OnLogic(){return 0;}
   virtual void OnRender(){return;}
 };
 
-struct MachineGameStateMainmenu : MachineGameStateBase{
-  enum MainmenuInnerState{
+enum StateType{
+	       STATE_MAINMENU = 1,
+	       STATE_MATCHGAME = 2
+};
+
+struct MachineGameStateMatchGame : MachineGameStateBase{
+  enum MatchGameInnerState{
 			  INNERSTATE_NORMAL,
 			  INNERSTATE_BEGIN,
 			  INNERSTATE_MENU
   };
 
-  MainmenuInnerState currInnerState;
+  MatchGameInnerState currInnerState;
   //int animFrame;
-  bool upPressed,downPressed,leftPressed,rightPressed;
+  bool upPressed,downPressed,leftPressed,rightPressed,escPressed;
   
   void OnKeyDown(const SDL_KeyboardEvent &ev);
   void OnKeyUp(const SDL_KeyboardEvent &ev);
-  void OnLogic();
+  int OnLogic();
   void OnRender();
   void AddTempBlock(int blockID,int beginPosX,int beginPosY,int endPosX,int endPosY,int totalFrame);
   
@@ -33,7 +38,7 @@ struct MachineGameStateMainmenu : MachineGameStateBase{
   int posX,posY;
   int newPosX,newPosY;
   
-  MachineGameStateMainmenu(GameGlobalState * const globalState);
+  MachineGameStateMatchGame(GameGlobalState * const globalState);
 
   int board[8][8];
   bool inAnim[8][8];
@@ -52,6 +57,19 @@ struct MachineGameStateMainmenu : MachineGameStateBase{
   int currScore;
 
   int beginAnimFrame;
+};
+
+struct MachineGameStateMainMenu : MachineGameStateBase{
+  void OnKeyDown(const SDL_KeyboardEvent &ev);
+  int OnLogic();
+  void OnRender();
+  MachineGameStateMainMenu(GameGlobalState* globalState);
+
+  bool downPressed,upPressed,enterPressed;
+  int titleAnimFrame;
+  int titleLineNo;
+  int currOption;
+  const char *titleLines[];
 };
 
 struct MachineGame{

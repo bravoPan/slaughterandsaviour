@@ -10,9 +10,9 @@ inline void exchangeInt(int * a,int * b){
   *b = t;
 }
 
-void MachineGameStateMainmenu::OnKeyDown(const SDL_KeyboardEvent &ev){
+void MachineGameStateMatchGame::OnKeyDown(const SDL_KeyboardEvent &ev){
   if(ev.keysym.sym == SDLK_ESCAPE){
-    quitGame = true;
+    escPressed = true;
   } else if(ev.keysym.sym == SDLK_UP){
     upPressed = downPressed = leftPressed = rightPressed = false;
     upPressed = true;
@@ -41,7 +41,7 @@ void MachineGameStateMainmenu::OnKeyDown(const SDL_KeyboardEvent &ev){
   }
 }
 
-void MachineGameStateMainmenu::OnKeyUp(const SDL_KeyboardEvent &ev){
+void MachineGameStateMatchGame::OnKeyUp(const SDL_KeyboardEvent &ev){
   if(ev.keysym.sym == SDLK_UP){
     upPressed = false;
   } else if(ev.keysym.sym == SDLK_DOWN){
@@ -53,12 +53,13 @@ void MachineGameStateMainmenu::OnKeyUp(const SDL_KeyboardEvent &ev){
   }
 }
 
-void MachineGameStateMainmenu::OnLogic(){
+int MachineGameStateMatchGame::OnLogic(){
+  if(escPressed){return 1;}
   if(currInnerState == INNERSTATE_BEGIN){
     ++beginAnimFrame;
     GUImodified = true;
     if(beginAnimFrame == 180){currInnerState = INNERSTATE_NORMAL;}
-    return;
+    return 0;
   }
   
   for(int i = 0;i < 8;++i){
@@ -159,7 +160,7 @@ void MachineGameStateMainmenu::OnLogic(){
     }
   }
 
-  if(upPressed && posX >= 1 && !inAnim[posX][posY] && !inAnim[posX - 1][posY] && board[posX - 1][posY] != -1){
+  if(upPressed && posX >= 1 && !inAnim[posX][posY] && !inAnim[posX - 1][posY] /*&& board[posX - 1][posY] != -1*/){
     inAnim[posX][posY] = true;
     dest[posX][posY][0] = posX - 1;
     dest[posX][posY][1] = posY;
@@ -174,7 +175,7 @@ void MachineGameStateMainmenu::OnLogic(){
     repl[posX - 1][posY] = board[posX][posY];
     --posX;
   }
-  if(downPressed && posX <= 6 && !inAnim[posX][posY] && !inAnim[posX + 1][posY]  && board[posX + 1][posY] != -1){
+  if(downPressed && posX <= 6 && !inAnim[posX][posY] && !inAnim[posX + 1][posY] /*&& board[posX + 1][posY] != -1*/){
     inAnim[posX][posY] = true;
     dest[posX][posY][0] = posX + 1;
     dest[posX][posY][1] = posY;
@@ -189,7 +190,7 @@ void MachineGameStateMainmenu::OnLogic(){
     repl[posX + 1][posY] = board[posX][posY];
     ++posX;
   }
-  if(leftPressed && posY >= 1 && !inAnim[posX][posY] && !inAnim[posX][posY - 1]  && board[posX][posY - 1] != -1){
+  if(leftPressed && posY >= 1 && !inAnim[posX][posY] && !inAnim[posX][posY - 1] /*&& board[posX][posY - 1] != -1*/){
     inAnim[posX][posY] = true;
     dest[posX][posY][0] = posX;
     dest[posX][posY][1] = posY - 1;
@@ -204,7 +205,7 @@ void MachineGameStateMainmenu::OnLogic(){
     repl[posX][posY - 1] = board[posX][posY];
     --posY;
   }
-  if(rightPressed && posY <= 6 && !inAnim[posX][posY] && !inAnim[posX][posY + 1]  && board[posX][posY + 1] != -1){
+  if(rightPressed && posY <= 6 && !inAnim[posX][posY] && !inAnim[posX][posY + 1] /*&& board[posX][posY + 1] != -1*/){
     inAnim[posX][posY] = true;
     dest[posX][posY][0] = posX;
     dest[posX][posY][1] = posY + 1;
@@ -219,9 +220,11 @@ void MachineGameStateMainmenu::OnLogic(){
     repl[posX][posY + 1] = board[posX][posY];
     ++posY;
   }
+
+  return 0;
 }
 
-void MachineGameStateMainmenu::OnRender(){
+void MachineGameStateMatchGame::OnRender(){
   glClear(GL_COLOR_BUFFER_BIT|GL_STENCIL_BUFFER_BIT);
   glEnable(GL_STENCIL_TEST);
   renderer.DrawStencil(723,723 + 9 * 106,964 - 9 * 106,964);
@@ -290,7 +293,7 @@ void MachineGameStateMainmenu::OnRender(){
   SDL_GL_SwapWindow(mainWindow);
 }
 
-void MachineGameStateMainmenu::AddTempBlock(int blockID,int beginPosX,int beginPosY,int endPosX,int endPosY,int totalFrame){
+void MachineGameStateMatchGame::AddTempBlock(int blockID,int beginPosX,int beginPosY,int endPosX,int endPosY,int totalFrame){
   for(int i = 0;i < 128;++i){
     if(!tempBlockUsed[i]){
       tempBlockUsed[i] = true;
@@ -307,11 +310,12 @@ void MachineGameStateMainmenu::AddTempBlock(int blockID,int beginPosX,int beginP
 }
 
 MachineGame::MachineGame(){
+  globalState.playerScore = 0;
   globalState.spriteAtlasID = renderer.RegisterSpriteAtlas("Sprites.png",1,7);
-  currState = new MachineGameStateMainmenu(&globalState);
+  currState = new MachineGameStateMainMenu(&globalState);
 }
 
-MachineGameStateMainmenu::MachineGameStateMainmenu(GameGlobalState * const globalState) : swapSpeed(6),elimSpeed(15){
+MachineGameStateMatchGame::MachineGameStateMatchGame(GameGlobalState * const globalState) : swapSpeed(9),elimSpeed(20){
   GUImodified = true;
   this -> globalState = globalState;
   posX = posY = 0;
@@ -334,6 +338,80 @@ MachineGameStateMainmenu::MachineGameStateMainmenu(GameGlobalState * const globa
   currScore = 0;
 }
 
+void MachineGameStateMainMenu::OnKeyDown(const SDL_KeyboardEvent &ev){
+  if(ev.keysym.sym == SDLK_ESCAPE){
+    quitGame = true;
+  } else if(ev.keysym.sym == SDLK_RETURN){
+    enterPressed = true;
+  } else if(ev.keysym.sym == SDLK_DOWN){
+    downPressed = true;
+  } else if(ev.keysym.sym == SDLK_UP){
+    upPressed = true;
+  }
+}
+
+int MachineGameStateMainMenu::OnLogic(){
+  ++titleAnimFrame;
+  if(titleAnimFrame == 480){
+    titleAnimFrame = 0;++titleLineNo;
+    if(titleLineNo == 7){titleLineNo = 0;}
+  }
+  if(downPressed){downPressed = false;++currOption;if(currOption == 2){currOption = 0;}}
+  if(upPressed){upPressed = false;--currOption;if(currOption == -1){currOption = 1;}}
+  if(enterPressed){
+    enterPressed = false;
+    if(currOption == 0){return STATE_MATCHGAME;}
+    if(currOption == 1){quitGame = true;}
+  }
+  return 0;
+}
+
+void MachineGameStateMainMenu::OnRender(){
+  glClear(GL_COLOR_BUFFER_BIT|GL_STENCIL_BUFFER_BIT);
+  renderer.BeginCairo();
+  cairo_t *cr = renderer.GUIcr;
+  PangoLayout *textLayout = renderer.pangoLayout;
+  PangoFontDescription *fontDesc = renderer.pangoDesc;
+  cairo_set_operator(cr,CAIRO_OPERATOR_SOURCE);
+  cairo_set_source_rgba(cr,0.0,0.0,0.0,0.0);
+  cairo_rectangle(cr,0,0,renderer.winW,renderer.winH);
+  cairo_fill(cr);
+  if(currOption == 1){
+    cairo_set_source_rgba(cr,0.0,1.0,0.0,1.0);
+  } else {
+    cairo_set_source_rgba(cr,1.0,0.0,0.0,1.0);
+  }
+  cairo_move_to(cr,151,505);
+  pango_layout_set_text(textLayout,"Start Game",-1);
+  pango_cairo_show_layout(cr,textLayout);
+  if(currOption == 0){
+    cairo_set_source_rgba(cr,0.0,1.0,0.0,1.0);
+  } else {
+    cairo_set_source_rgba(cr,1.0,0.0,0.0,1.0);
+  }
+  cairo_move_to(cr,151,637);
+  pango_layout_set_text(textLayout,"Exit Game",-1);
+  pango_cairo_show_layout(cr,textLayout);
+  cairo_move_to(cr,879,740 - 0.833 * titleAnimFrame);
+  cairo_set_source_rgba(cr,std::sin(((double)titleAnimFrame) / 960 * M_PI),std::cos(((double)titleAnimFrame) /  960 * M_PI),0.0,std::sin(((double)titleAnimFrame) / 480 * M_PI) * 0.8 + 0.2);
+  pango_layout_set_width(textLayout,750 * PANGO_SCALE);
+  pango_layout_set_markup(textLayout,titleLines[titleLineNo],-1);
+  pango_cairo_show_layout(cr,textLayout);
+  renderer.EndCairo(true);
+  
+  SDL_GL_SwapWindow(mainWindow);
+}
+
+MachineGameStateMainMenu::MachineGameStateMainMenu(GameGlobalState* globalState) : currOption(0),downPressed(false),upPressed(false),enterPressed(false),titleLineNo(0),titleAnimFrame(0),
+			     titleLines{"<span font='24'>Slaughter and Savior: A Game by Charlie and Gilbert</span>",
+					"<span font='24'>Once upon a time there were four kingdoms</span>",
+					"<span font='24'>Each one held a part of a sacred sword that guarded the peace of their land</span>",
+					"<span font='24'>Yet as the kings grew more and more greedy</span>",
+					"<span font='24'>They were stuck in an endless war, vying for complete control over the sword</span>",
+					"<span font='24'>The war exhausted all resources on the land, collapsing the kingdoms</span>",
+					"<span font='24'>Can you find all the parts of the sacred sword, and bring peace and prosperity back to this desolate havoc?</span>"}
+{return;}
+
 void MachineGame::RunGameLoop(){
   prevTime = std::chrono::steady_clock::now();
   
@@ -353,7 +431,17 @@ void MachineGame::RunGameLoop(){
     auto dur = std::chrono::duration_cast<std::chrono::duration<int,std::ratio<1,1000>>>(currTime - prevTime);
     
     if(dur.count() >= 15){
-      currState->OnLogic();
+      int t = currState->OnLogic();
+      if(t != 0){
+	delete currState;
+	if(t == STATE_MAINMENU){
+	  currState = new MachineGameStateMainMenu(&globalState);
+	}
+	if(t == STATE_MATCHGAME){
+	  currState = new MachineGameStateMatchGame(&globalState);
+	}
+	currState->OnLogic();
+      }
       currState->OnRender();
       prevTime = currTime;
     }

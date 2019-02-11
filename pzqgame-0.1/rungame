@@ -1,0 +1,8 @@
+if [ ! -f asset/PZQGame ]; then
+	if [ ! -f src/PZQGame ]; then
+		echo "You have not built the program!"
+	else
+		cp src/PZQGame asset/PZQGame
+	fi
+fi
+(cd asset; ./PZQGame)

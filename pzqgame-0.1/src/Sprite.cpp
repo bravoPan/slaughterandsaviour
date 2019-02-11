@@ -51,3 +51,27 @@ void Sprite::GetColorData(int ID,GLfloat dst[]){
   dst[8] = q;dst[9] = s;
   dst[10] = q;dst[11] = r;
 }
+
+void Sprite::GetHalfColorData(int halfID,GLfloat dst[]){
+  int ID = halfID / 2;
+  if(ID >= rows * columns){
+    std::memset(dst,0,12 * sizeof(GLfloat));
+    return;
+  }
+  int a = ID / columns;
+  int b = ID % columns;
+  GLfloat p = (1.0f / columns) * b;
+  GLfloat q = (1.0f / columns) * (b + 1);
+  GLfloat r = (1.0f / rows) * a;
+  GLfloat s = (1.0f / rows) * (a + 1);
+
+  if((halfID & 1) == 0){
+    dst[0] = p;dst[1] = r;
+    dst[2] = q;dst[3] = r;
+    dst[4] = p;dst[5] = s;
+  } else {
+    dst[0] = p;dst[1] = s;
+    dst[2] = q;dst[3] = s;
+    dst[4] = q;dst[5] = r;
+  }
+}

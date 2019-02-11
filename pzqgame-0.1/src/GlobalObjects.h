@@ -9,8 +9,8 @@ extern SDL_GLContext mainContext;
 extern bool quitGame;
 extern bool vsyncEnabled;
 
-extern GLuint vertexShader,fragmentShader;
-extern GLuint shaderProgram;
+//extern GLuint vertexShader,fragmentShader;
+//extern GLuint shaderProgram;
 extern GLuint emptyTexture;
 
 extern FT_Library ftLibrary;

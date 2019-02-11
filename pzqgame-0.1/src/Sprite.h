@@ -14,6 +14,7 @@ class Sprite
 
   void UseThisSprite();
   void GetColorData(int ID,GLfloat dst[]);
+  void GetHalfColorData(int halfID,GLfloat dst[]);
 };
 
 #endif

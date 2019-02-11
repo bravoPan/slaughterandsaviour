@@ -13,7 +13,8 @@ struct MachineGameStateBase{
 
 enum StateType{
 	       STATE_MAINMENU = 1,
-	       STATE_MATCHGAME = 2
+	       STATE_MATCHGAME = 2,
+	       STATE_WORLDMAP = 3
 };
 
 struct MachineGameStateMatchGame : MachineGameStateBase{
@@ -41,15 +42,11 @@ struct MachineGameStateMatchGame : MachineGameStateBase{
   MachineGameStateMatchGame(GameGlobalState * const globalState);
 
   int board[8][8];
-  bool inAnim[8][8];
-  int animFrame[8][8];
-  int totalFrame[8][8];
-  int dest[8][8][2];
-  int repl[8][8];
-  bool falling[8][8];
+  bool boardEmpty[8][8];
 
   struct TemporaryBlock{
     int blockID,posX,posY,destPosX,destPosY,animFrame,totalFrame;
+    bool replBlock;
   } tempBlocks[128];
   bool tempBlockUsed[128];
 
@@ -57,6 +54,19 @@ struct MachineGameStateMatchGame : MachineGameStateBase{
   int currScore;
 
   int beginAnimFrame;
+};
+
+struct MachineGameStateWorldmap : MachineGameStateBase{
+  void OnKeyDown(const SDL_KeyboardEvent &ev);
+  void OnKeyUp(const SDL_KeyboardEvent &ev);
+  int OnLogic();
+  void OnRender();
+  MachineGameStateWorldmap(GameGlobalState* globalState);
+
+  bool escPressed,upPressed,downPressed,leftPressed,rightPressed;
+  int maze[9][9];
+  double xyRot,yawn;
+  GameGlobalState* globalState;
 };
 
 struct MachineGameStateMainMenu : MachineGameStateBase{
@@ -69,7 +79,7 @@ struct MachineGameStateMainMenu : MachineGameStateBase{
   int titleAnimFrame;
   int titleLineNo;
   int currOption;
-  const char *titleLines[];
+  const char *titleLines[7];
 };
 
 struct MachineGame{

@@ -6,8 +6,8 @@ SDL_GLContext mainContext = NULL,cairoContext = NULL;
 bool quitGame = false;
 bool vsyncEnabled = false;
 
-GLuint vertexShader,fragmentShader;
-GLuint shaderProgram;
+//GLuint vertexShader,fragmentShader;
+//GLuint shaderProgram;
 GLuint emptyTexture;
 
 Renderer renderer;
@@ -87,49 +87,6 @@ bool GlobalInitialize(){
 
   renderer.Initialize();
 
-  //Create Shader Program
-  int fileLen;
-  char *shaderlog;
-
-  vertexShader = glCreateShader(GL_VERTEX_SHADER);
-  char* vertexSource = ReadWholeFile("PZQGame.vert",&fileLen);
-  glShaderSource(vertexShader,1,(const GLchar**)&vertexSource,&fileLen);
-  glCompileShader(vertexShader);
-  glGetShaderiv(vertexShader,GL_INFO_LOG_LENGTH,&fileLen);
-  shaderlog = new char[fileLen + 50];
-  glGetShaderInfoLog(vertexShader,fileLen,&fileLen,shaderlog);
-  std::cout << shaderlog << std::endl;
-  
-  delete [] vertexSource;
-  delete [] shaderlog;
-
-  fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-  char* fragmentSource = ReadWholeFile("PZQGame.frag",&fileLen);
-  glShaderSource(fragmentShader,1,(const GLchar**)&fragmentSource,&fileLen);
-  glCompileShader(fragmentShader);
-  glGetShaderiv(fragmentShader,GL_INFO_LOG_LENGTH,&fileLen);
-  shaderlog = new char[fileLen + 50];
-  glGetShaderInfoLog(fragmentShader,fileLen,&fileLen,shaderlog);
-  std::cout << shaderlog << std::endl;
-  
-  delete [] fragmentSource;
-  delete [] shaderlog;
-
-  shaderProgram = glCreateProgram();
-  glAttachShader(shaderProgram,vertexShader);
-  glAttachShader(shaderProgram,fragmentShader);
-  glLinkProgram(shaderProgram);
-  glGetProgramiv(shaderProgram,GL_INFO_LOG_LENGTH,&fileLen);
-  shaderlog = new char[fileLen + 50];
-  glGetProgramInfoLog(shaderProgram,fileLen,&fileLen,shaderlog);
-  std::cout << shaderlog << std::endl;
-  
-  delete [] shaderlog;
-  
-  glUseProgram(shaderProgram);
-  glDeleteShader(vertexShader);
-  glDeleteShader(fragmentShader);
-
   glClearColor(0.0,0.0,0.0,1.0);
   glClearStencil(0);
   glStencilFunc(GL_LEQUAL,1,0xFF);
@@ -146,7 +103,7 @@ bool GlobalInitialize(){
 void GlobalFinalize(){
   FT_Done_FreeType(ftLibrary);
   glUseProgram(0);
-  glDeleteProgram(shaderProgram);
+  //glDeleteProgram(shaderProgram);
   SDL_GL_DeleteContext(mainContext);
   SDL_DestroyWindow(mainWindow);
   SDL_Quit();

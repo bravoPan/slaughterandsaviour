@@ -28,4 +28,7 @@
 #include <fontconfig/fontconfig.h>
 #include <pango/pangocairo.h>
 
+#include "glm/glm.hpp"
+#include "glm/gtc/matrix_transform.hpp"
+
 #endif

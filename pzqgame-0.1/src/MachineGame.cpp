@@ -4,10 +4,49 @@
 #include "MachineGame.h"
 #include "GameGlobalState.h"
 
-inline void exchangeInt(int * a,int * b){
-  int t = *a;
-  *a = *b;
-  *b = t;
+void MachineGame::RunGameLoop(){
+  prevTime = std::chrono::steady_clock::now();
+  
+  while(!quitGame){
+    SDL_Event event;
+    while(SDL_PollEvent(&event)){
+      if(event.type == SDL_QUIT){
+	quitGame = true;
+      } else if(event.type == SDL_KEYDOWN){
+	currState->OnKeyDown(event.key);
+      } else if(event.type == SDL_KEYUP){
+	currState->OnKeyUp(event.key);
+      }
+    }
+
+    currTime = std::chrono::steady_clock::now();
+    auto dur = std::chrono::duration_cast<std::chrono::duration<int,std::ratio<1,1000>>>(currTime - prevTime);
+    
+    if(dur.count() >= 15){
+      int t = currState->OnLogic();
+      if(t != 0){
+	delete currState;
+	if(t == STATE_MAINMENU){
+	  currState = new MachineGameStateMainMenu(&globalState);
+	}
+	if(t == STATE_MATCHGAME){
+	  currState = new MachineGameStateMatchGame(&globalState);
+	}
+	if(t == STATE_WORLDMAP){
+	  currState = new MachineGameStateWorldmap(&globalState);
+	}
+	currState->OnLogic();
+      }
+      currState->OnRender();
+      prevTime = currTime;
+    }
+  }
+}
+
+MachineGame::MachineGame(){
+  globalState.playerScore = 0;
+  globalState.spriteAtlasID = renderer.RegisterSpriteAtlas("Sprites.png",1,7);
+  currState = new MachineGameStateMainMenu(&globalState);
 }
 
 void MachineGameStateMatchGame::OnKeyDown(const SDL_KeyboardEvent &ev){
@@ -25,19 +64,6 @@ void MachineGameStateMatchGame::OnKeyDown(const SDL_KeyboardEvent &ev){
   } else if(ev.keysym.sym == SDLK_RIGHT){
     upPressed = downPressed = leftPressed = rightPressed = false;
     rightPressed = true;
-  } else if(ev.keysym.sym == SDLK_p){
-    for(int i = 0;i < 8;++i){
-      for(int j = 0;j < 8;++j){
-	std::cout << totalFrame[i][j] << ' ';
-      }
-      std::cout << std::endl;
-    }
-    for(int i = 0;i < 8;++i){
-      for(int j = 0;j < 8;++j){
-	std::cout << animFrame[i][j] << ' ';
-      }
-      std::cout << std::endl;
-    }
   }
 }
 
@@ -61,26 +87,14 @@ int MachineGameStateMatchGame::OnLogic(){
     if(beginAnimFrame == 180){currInnerState = INNERSTATE_NORMAL;}
     return 0;
   }
-  
-  for(int i = 0;i < 8;++i){
-    for(int j = 0;j < 8;++j){
-      if(inAnim[i][j]){
-	++animFrame[i][j];
-	if(animFrame[i][j] == totalFrame[i][j]){
-	  inAnim[i][j] = false;
-	  falling[i][j] = false;
-	  animFrame[i][j] = 0;
-	  totalFrame[i][j] = 0;
-	  board[i][j] = repl[i][j];
-	}
-      }
-    }
-  }
 
   for(int i = 0;i < 128;++i){
     if(!tempBlockUsed[i]){continue;}
     ++tempBlocks[i].animFrame;
     if(tempBlocks[i].animFrame == tempBlocks[i].totalFrame){
+      if(tempBlocks[i].replBlock){
+	board[tempBlocks[i].destPosX][tempBlocks[i].destPosY] = tempBlocks[i].blockID;
+      }
       tempBlockUsed[i] = false;
     }
   }
@@ -90,14 +104,13 @@ int MachineGameStateMatchGame::OnLogic(){
   for(int i = 0;i < 8;++i){for(int j = 0;j < 8;++j){eliminable[i][j] = false;}}
   for(int i = 0;i < 8;++i){
     for(int j = 0;j < 8;++j){
-      if(inAnim[i][j]){continue;}
       if(board[i][j] == -1){continue;}
-      if(j <= 5 && !inAnim[i][j + 1] && !inAnim[i][j + 2]){
+      if(j <= 5){
 	if(board[i][j] == board[i][j + 1] && board[i][j] == board[i][j + 2]){
 	  eliminable[i][j] = eliminable[i][j + 1] = eliminable[i][j + 2] = true;
 	}
       }
-      if(i <= 5 && !inAnim[i + 1][j] && !inAnim[i + 2][j]){
+      if(i <= 5){
 	if(board[i][j] == board[i + 1][j] && board[i][j] == board[i + 2][j]){
 	  eliminable[i][j] = eliminable[i + 1][j] = eliminable[i + 2][j] = true;
 	}
@@ -110,6 +123,7 @@ int MachineGameStateMatchGame::OnLogic(){
       if(eliminable[i][j]){
 	AddTempBlock(board[i][j],i,j,8,8,elimSpeed);
         board[i][j] = -1;
+	boardEmpty[i][j] = true;
 	currScore += 20;
 	GUImodified = true;
       }
@@ -118,27 +132,14 @@ int MachineGameStateMatchGame::OnLogic(){
 
   for(int i = 6;i >= 0;--i){
     for(int j = 0;j < 8;++j){
-      if(inAnim[i][j] || board[i][j] == -1){continue;}
-      if(inAnim[i + 1][j] && repl[i + 1][j] != -1){continue;}
-      if(board[i + 1][j] == -1 || falling[i + 1][j]){
-	falling[i][j] = true;
-	inAnim[i][j] = true;
-	animFrame[i][j] = 0;
-	totalFrame[i][j] = swapSpeed;
-	dest[i][j][0] = i + 1;
-	dest[i][j][1] = j;
-	if(inAnim[i + 1][j]){repl[i + 1][j] = board[i][j];} else {
-	  inAnim[i + 1][j] = true;
-	  animFrame[i + 1][j] = 0;
-	  totalFrame[i + 1][j] = swapSpeed;
-	  dest[i + 1][j][0] = i + 1;
-	  dest[i + 1][j][1] = j;
-	  repl[i + 1][j] = board[i][j];
-	}
-	repl[i][j] = -1;
+      if(board[i][j] == -1){continue;}
+      if(boardEmpty[i + 1][j]){
+	AddTempBlock(board[i][j],i,j,i + 1,j,swapSpeed);
+	boardEmpty[i][j] = true;
+	board[i][j] = -1;
 	if(i == 0){
-	  repl[0][j] = randEngine() % 6;
-	  AddTempBlock(repl[0][j],-1,j,0,j,swapSpeed);
+	  AddTempBlock(randEngine() % 6,-1,j,0,j,swapSpeed);
+	  boardEmpty[i][j] = false;
 	}
 	if(i == posX && j == posY){++posX;}
       }
@@ -146,78 +147,38 @@ int MachineGameStateMatchGame::OnLogic(){
   }
 
   for(int i = 0;i < 8;++i){
-    if(repl[0][i] == -1){
-      repl[0][i] = randEngine() % 6;
-      AddTempBlock(repl[0][i],-1,i,0,i,swapSpeed);
-    } else if(board[0][i] == -1 && !inAnim[0][i]){
-      inAnim[0][i] = true;
-      animFrame[0][i] = 0;
-      totalFrame[0][i] = swapSpeed;
-      dest[0][i][0] = 0;
-      dest[0][i][1] = i;
-      repl[0][i] = randEngine() % 6;
-      AddTempBlock(repl[0][i],-1,i,0,i,swapSpeed);
+    if(boardEmpty[0][i]){
+      AddTempBlock(randEngine() % 6,-1,i,0,i,swapSpeed);
     }
   }
 
-  if(upPressed && posX >= 1 && !inAnim[posX][posY] && !inAnim[posX - 1][posY] /*&& board[posX - 1][posY] != -1*/){
-    inAnim[posX][posY] = true;
-    dest[posX][posY][0] = posX - 1;
-    dest[posX][posY][1] = posY;
-    animFrame[posX][posY] = 0;
-    totalFrame[posX][posY] = swapSpeed;
-    repl[posX][posY] = board[posX - 1][posY];
-    inAnim[posX - 1][posY] = true;
-    dest[posX - 1][posY][0] = posX;
-    dest[posX - 1][posY][1] = posY;
-    animFrame[posX - 1][posY] = 0;
-    totalFrame[posX - 1][posY] = swapSpeed;
-    repl[posX - 1][posY] = board[posX][posY];
+  if(upPressed && posX >= 1 && board[posX][posY] != -1 && !(board[posX - 1][posY] == -1 && !boardEmpty[posX - 1][posY])){
+    boardEmpty[posX][posY] = boardEmpty[posX - 1][posY] = true;
+    AddTempBlock(board[posX][posY],posX,posY,posX - 1,posY,swapSpeed);
+    AddTempBlock(board[posX - 1][posY],posX - 1,posY,posX,posY,swapSpeed);
+    board[posX][posY] = board[posX - 1][posY] = -1;
     --posX;
   }
-  if(downPressed && posX <= 6 && !inAnim[posX][posY] && !inAnim[posX + 1][posY] /*&& board[posX + 1][posY] != -1*/){
-    inAnim[posX][posY] = true;
-    dest[posX][posY][0] = posX + 1;
-    dest[posX][posY][1] = posY;
-    animFrame[posX][posY] = 0;
-    totalFrame[posX][posY] = swapSpeed;
-    repl[posX][posY] = board[posX + 1][posY];
-    inAnim[posX + 1][posY] = true;
-    dest[posX + 1][posY][0] = posX;
-    dest[posX + 1][posY][1] = posY;
-    animFrame[posX + 1][posY] = 0;
-    totalFrame[posX + 1][posY] = swapSpeed;
-    repl[posX + 1][posY] = board[posX][posY];
+  if(downPressed && posX <= 6 && board[posX][posY] != -1 && !(board[posX + 1][posY] == -1 && !boardEmpty[posX + 1][posY])){
+    
+    boardEmpty[posX][posY] = boardEmpty[posX + 1][posY] = true;
+    AddTempBlock(board[posX][posY],posX,posY,posX + 1,posY,swapSpeed);
+    AddTempBlock(board[posX + 1][posY],posX + 1,posY,posX,posY,swapSpeed);
+    board[posX][posY] = board[posX + 1][posY] = -1;
     ++posX;
   }
-  if(leftPressed && posY >= 1 && !inAnim[posX][posY] && !inAnim[posX][posY - 1] /*&& board[posX][posY - 1] != -1*/){
-    inAnim[posX][posY] = true;
-    dest[posX][posY][0] = posX;
-    dest[posX][posY][1] = posY - 1;
-    animFrame[posX][posY] = 0;
-    totalFrame[posX][posY] = swapSpeed;
-    repl[posX][posY] = board[posX][posY - 1];
-    inAnim[posX][posY - 1] = true;
-    dest[posX][posY - 1][0] = posX;
-    dest[posX][posY - 1][1] = posY;
-    animFrame[posX][posY - 1] = 0;
-    totalFrame[posX][posY - 1] = swapSpeed;
-    repl[posX][posY - 1] = board[posX][posY];
+  if(leftPressed && posY >= 1 && board[posX][posY] != -1 && !(board[posX][posY - 1] == -1 && !boardEmpty[posX][posY - 1])){
+    boardEmpty[posX][posY] = boardEmpty[posX][posY - 1] = true;
+    AddTempBlock(board[posX][posY],posX,posY,posX,posY - 1,swapSpeed);
+    AddTempBlock(board[posX][posY - 1],posX,posY - 1,posX,posY,swapSpeed);
+    board[posX][posY] = board[posX][posY - 1] = -1;
     --posY;
   }
-  if(rightPressed && posY <= 6 && !inAnim[posX][posY] && !inAnim[posX][posY + 1] /*&& board[posX][posY + 1] != -1*/){
-    inAnim[posX][posY] = true;
-    dest[posX][posY][0] = posX;
-    dest[posX][posY][1] = posY + 1;
-    animFrame[posX][posY] = 0;
-    totalFrame[posX][posY] = swapSpeed;
-    repl[posX][posY] = board[posX][posY + 1];
-    inAnim[posX][posY + 1] = true;
-    dest[posX][posY + 1][0] = posX;
-    dest[posX][posY + 1][1] = posY;
-    animFrame[posX][posY + 1] = 0;
-    totalFrame[posX][posY + 1] = swapSpeed;
-    repl[posX][posY + 1] = board[posX][posY];
+  if(rightPressed && posY <= 6 && board[posX][posY] != -1 && !(board[posX][posY + 1] == -1 && !boardEmpty[posX][posY + 1])){
+    boardEmpty[posX][posY] = boardEmpty[posX][posY + 1] = true;
+    AddTempBlock(board[posX][posY],posX,posY,posX,posY + 1,swapSpeed);
+    AddTempBlock(board[posX][posY + 1],posX,posY + 1,posX,posY,swapSpeed);
+    board[posX][posY] = board[posX][posY + 1] = -1;
     ++posY;
   }
 
@@ -233,19 +194,7 @@ void MachineGameStateMatchGame::OnRender(){
   for(int i = 0;i < 8;++i){
     for(int j = 0;j < 8;++j){
       if(board[i][j] == -1){continue;}
-      if(!inAnim[i][j]){
-	renderer.DrawQuad(723 + 106 * j,723 + 106 * (j + 1),964 - 106 * (i + 1),964 - 106 * i,board[i][j]);
-      } else {
-	float p,q,r,s;
-	float x,y;
-	p = 723 + 106 * j;
-	q = 964 - 106 * (i + 1);
-	r = 723 + 106 * dest[i][j][1];
-	s = 964 - 106 * (dest[i][j][0] + 1);
-	x = (p * (totalFrame[i][j] - animFrame[i][j])) / totalFrame[i][j] + (r * animFrame[i][j]) / totalFrame[i][j];
-	y = (q * (totalFrame[i][j] - animFrame[i][j])) / totalFrame[i][j] + (s * animFrame[i][j]) / totalFrame[i][j];
-	renderer.DrawQuad(x,x + 106,y,y + 106,board[i][j]);
-      }
+      renderer.DrawQuad(723 + 106 * j,723 + 106 * (j + 1),964 - 106 * (i + 1),964 - 106 * i,board[i][j]);
     }
   }
 
@@ -294,6 +243,7 @@ void MachineGameStateMatchGame::OnRender(){
 }
 
 void MachineGameStateMatchGame::AddTempBlock(int blockID,int beginPosX,int beginPosY,int endPosX,int endPosY,int totalFrame){
+  if(blockID == -1){return;}
   for(int i = 0;i < 128;++i){
     if(!tempBlockUsed[i]){
       tempBlockUsed[i] = true;
@@ -304,29 +254,22 @@ void MachineGameStateMatchGame::AddTempBlock(int blockID,int beginPosX,int begin
       tempBlocks[i].destPosY = endPosY;
       tempBlocks[i].animFrame = 0;
       tempBlocks[i].totalFrame = totalFrame;
+      if(endPosX != 8){tempBlocks[i].replBlock = true;boardEmpty[endPosX][endPosY] = false;} else {tempBlocks[i].replBlock = false;}
       return;
     }
   }
-}
-
-MachineGame::MachineGame(){
-  globalState.playerScore = 0;
-  globalState.spriteAtlasID = renderer.RegisterSpriteAtlas("Sprites.png",1,7);
-  currState = new MachineGameStateMainMenu(&globalState);
 }
 
 MachineGameStateMatchGame::MachineGameStateMatchGame(GameGlobalState * const globalState) : swapSpeed(9),elimSpeed(20){
   GUImodified = true;
   this -> globalState = globalState;
   posX = posY = 0;
-  upPressed = downPressed = leftPressed = rightPressed = false;
+  upPressed = downPressed = leftPressed = rightPressed = escPressed = false;
 
   for(int i = 0;i < 8;++i){
     for(int j = 0;j < 8;++j){
       board[i][j] = randEngine() % 6;
-      inAnim[i][j] = false;
-      animFrame[i][j] = 0;
-      totalFrame[i][j] = 0;
+      boardEmpty[i][j] = false;
     }
   }
   board[0][0] = 6;
@@ -360,7 +303,7 @@ int MachineGameStateMainMenu::OnLogic(){
   if(upPressed){upPressed = false;--currOption;if(currOption == -1){currOption = 1;}}
   if(enterPressed){
     enterPressed = false;
-    if(currOption == 0){return STATE_MATCHGAME;}
+    if(currOption == 0){return STATE_WORLDMAP;}
     if(currOption == 1){quitGame = true;}
   }
   return 0;
@@ -412,38 +355,77 @@ MachineGameStateMainMenu::MachineGameStateMainMenu(GameGlobalState* globalState)
 					"<span font='24'>Can you find all the parts of the sacred sword, and bring peace and prosperity back to this desolate havoc?</span>"}
 {return;}
 
-void MachineGame::RunGameLoop(){
-  prevTime = std::chrono::steady_clock::now();
-  
-  while(!quitGame){
-    SDL_Event event;
-    while(SDL_PollEvent(&event)){
-      if(event.type == SDL_QUIT){
-	quitGame = true;
-      } else if(event.type == SDL_KEYDOWN){
-	currState->OnKeyDown(event.key);
-      } else if(event.type == SDL_KEYUP){
-	currState->OnKeyUp(event.key);
-      }
-    }
+void MachineGameStateWorldmap::OnKeyDown(const SDL_KeyboardEvent &ev){
+  if(ev.keysym.sym == SDLK_ESCAPE){
+    escPressed = true;
+  } else if(ev.keysym.sym == SDLK_LEFT){
+    rightPressed = upPressed = downPressed = false;
+    leftPressed = true;
+  } else if(ev.keysym.sym == SDLK_RIGHT){
+    leftPressed = upPressed = downPressed = false;
+    rightPressed = true;
+  }
+}
 
-    currTime = std::chrono::steady_clock::now();
-    auto dur = std::chrono::duration_cast<std::chrono::duration<int,std::ratio<1,1000>>>(currTime - prevTime);
-    
-    if(dur.count() >= 15){
-      int t = currState->OnLogic();
-      if(t != 0){
-	delete currState;
-	if(t == STATE_MAINMENU){
-	  currState = new MachineGameStateMainMenu(&globalState);
-	}
-	if(t == STATE_MATCHGAME){
-	  currState = new MachineGameStateMatchGame(&globalState);
-	}
-	currState->OnLogic();
-      }
-      currState->OnRender();
-      prevTime = currTime;
+void MachineGameStateWorldmap::OnKeyUp(const SDL_KeyboardEvent &ev){
+  if(ev.keysym.sym == SDLK_LEFT){
+    leftPressed = false;
+  } else if(ev.keysym.sym == SDLK_RIGHT){
+    rightPressed = false;
+  }
+}
+
+int MachineGameStateWorldmap::OnLogic(){
+  if(escPressed){return STATE_MAINMENU;}
+  if(leftPressed){xyRot += M_PI / 360;}
+  if(rightPressed){xyRot -= M_PI / 360;}
+  return 0;
+}
+
+void MachineGameStateWorldmap::OnRender(){
+  glClear(GL_COLOR_BUFFER_BIT|GL_STENCIL_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
+  renderer.UseSpriteAtlas(globalState -> spriteAtlasID);
+  renderer.Begin3D();
+  renderer.cameraMat = glm::lookAt(glm::vec3(4 * std::sin(xyRot),6,4 * std::cos(xyRot)),glm::vec3(0,0,0),glm::vec3(0,1,0));
+  GLfloat trigVert[18];
+  GLfloat trigColor[2];
+  for(int i = 0;i < 9;++i){
+    for(int j = 0;j < 9;++j){
+      trigVert[0] = -4.5 + j;
+      trigVert[1] = 0;
+      trigVert[2] = -4.5 + i;
+      trigVert[3] = -3.5 + j;
+      trigVert[4] = 0;
+      trigVert[5] = -4.5 + i;
+      trigVert[6] = -4.5 + j;
+      trigVert[7] = 0;
+      trigVert[8] = -3.5 + i;
+      trigVert[9] = -4.5 + j;
+      trigVert[10] = 0;
+      trigVert[11] = -3.5 + i;
+      trigVert[12] = -3.5 + j;
+      trigVert[13] = 0;
+      trigVert[14] = -3.5 + i;
+      trigVert[15] = -3.5 + j;
+      trigVert[16] = 0;
+      trigVert[17] = -4.5 + i;
+      trigColor[0] = maze[i][j] * 2;
+      trigColor[1] = maze[i][j] * 2 + 1;
+      renderer.Draw3DTriangles(trigVert,trigColor,2);
     }
   }
+  renderer.End3D();
+  SDL_GL_SwapWindow(mainWindow);
+  return;
+}
+
+MachineGameStateWorldmap::MachineGameStateWorldmap(GameGlobalState * const globalState) : escPressed(false), leftPressed(false), rightPressed(false){
+  this -> globalState = globalState;
+  renderer.projMat = glm::perspective((M_PI * 45)/180,1.778,0.5,20.0);
+  for(int i = 0;i < 9;++i){
+    for(int j = 0;j < 9;++j){
+      maze[i][j] = randEngine() % 6;
+    }
+  }
+  return;
 }

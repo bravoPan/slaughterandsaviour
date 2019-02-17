@@ -16,6 +16,8 @@ FT_Library ftLibrary;
 
 std::mt19937 randEngine(std::time(0));
 
+MachineGame machine;
+
 bool GlobalInitialize(){
   //SDL Initialization
   if(SDL_Init(SDL_INIT_VIDEO) < 0){

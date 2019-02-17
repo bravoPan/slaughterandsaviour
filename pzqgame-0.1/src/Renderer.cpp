@@ -272,7 +272,7 @@ void Renderer::Begin3D(){
   if(mode3D){return;}
   glUseProgram(shader3DProgram);
   glEnable(GL_DEPTH_TEST);
-  glDepthFunc(GL_ALWAYS);
+  glDepthFunc(GL_LESS);
   mode3D = true;
 }
 

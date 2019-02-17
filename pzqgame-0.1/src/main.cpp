@@ -7,7 +7,8 @@ int main(int argc,char *argv[]){
     return 1;
   }
 
-  MachineGame machine;
+  //MachineGame machine;
+  machine.Initiate();
   machine.RunGameLoop();
 
   GlobalFinalize();

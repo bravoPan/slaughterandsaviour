@@ -3,6 +3,7 @@
 
 #include "common.h"
 #include "Renderer.h"
+#include "MachineGame.h"
 
 extern SDL_Window *mainWindow;
 extern SDL_GLContext mainContext;
@@ -18,6 +19,8 @@ extern FT_Library ftLibrary;
 extern Renderer renderer;
 
 extern std::mt19937 randEngine;
+
+extern MachineGame machine;
 
 bool GlobalInitialize();
 void GlobalFinalize();

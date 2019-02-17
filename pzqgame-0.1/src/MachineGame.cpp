@@ -22,7 +22,7 @@ void MachineGame::RunGameLoop(){
     currTime = std::chrono::steady_clock::now();
     auto dur = std::chrono::duration_cast<std::chrono::duration<int,std::ratio<1,1000>>>(currTime - prevTime);
     
-    if(dur.count() >= 15){
+    if(dur.count() >= 8){
       int t = currState->OnLogic();
       if(t != 0){
 	delete currState;
@@ -43,9 +43,9 @@ void MachineGame::RunGameLoop(){
   }
 }
 
-MachineGame::MachineGame(){
+void MachineGame::Initiate(){
   globalState.playerScore = 0;
-  globalState.spriteAtlasID = renderer.RegisterSpriteAtlas("Sprites.png",1,7);
+  globalState.spriteAtlasID = renderer.RegisterSpriteAtlas("Sprites.png",2,7);
   currState = new MachineGameStateMainMenu(&globalState);
 }
 
@@ -364,6 +364,24 @@ void MachineGameStateWorldmap::OnKeyDown(const SDL_KeyboardEvent &ev){
   } else if(ev.keysym.sym == SDLK_RIGHT){
     leftPressed = upPressed = downPressed = false;
     rightPressed = true;
+  } else if(ev.keysym.sym == SDLK_UP){
+    leftPressed = rightPressed = downPressed = false;
+    upPressed = true;
+  } else if(ev.keysym.sym == SDLK_DOWN){
+    leftPressed = rightPressed = upPressed = false;
+    downPressed = true;
+  } else if(ev.keysym.sym == SDLK_a){
+    sPressed = dPressed = wPressed = false;
+    aPressed = true;
+  } else if(ev.keysym.sym == SDLK_s){
+    aPressed = dPressed = wPressed = false;
+    sPressed = true;
+  } else if(ev.keysym.sym == SDLK_d){
+    sPressed = aPressed = wPressed = false;
+    dPressed = true;
+  } else if(ev.keysym.sym == SDLK_w){
+    sPressed = dPressed = aPressed = false;
+    wPressed = true;
   }
 }
 
@@ -372,13 +390,68 @@ void MachineGameStateWorldmap::OnKeyUp(const SDL_KeyboardEvent &ev){
     leftPressed = false;
   } else if(ev.keysym.sym == SDLK_RIGHT){
     rightPressed = false;
+  } else if(ev.keysym.sym == SDLK_UP){
+    upPressed = false;
+  } else if(ev.keysym.sym == SDLK_DOWN){
+    downPressed = false;
+  } else if(ev.keysym.sym == SDLK_a){
+    aPressed = false;
+  } else if(ev.keysym.sym == SDLK_s){
+    sPressed = false;
+  } else if(ev.keysym.sym == SDLK_d){
+    dPressed = false;
+  } else if(ev.keysym.sym == SDLK_w){
+    wPressed = false;
   }
+}
+
+bool MachineGameStateWorldmap::AttemptMove(float newPosX,float newPosY){
+  int p = std::round(newPosX),q = std::round(newPosY);
+  int u = p + 36,v = q + 36;
+  if(maze[u][v] == 10){return false;}
+  bool front = false,back = false,left = false,right = false;
+  if(u > 0 && maze[u - 1][v] == 10){front = true;}
+  if(u < 72 && maze[u + 1][v] == 10){back = true;}
+  if(v > 0 && maze[u][v - 1] == 10){left = true;}
+  if(v < 72 && maze[u][v + 1] == 10){right = true;}
+  if(u > 0 && v > 0 && maze[u - 1][v - 1] == 10){front = true;left = true;}
+  if(u > 0 && v < 72 && maze[u - 1][v + 1] == 10){front = true;right = true;}
+  if(u < 72 && v > 0 && maze[u + 1][v - 1] == 10){back = true;left = true;}
+  if(u < 72 && v < 72 && maze[u + 1][v + 1] == 10){back = true;right = true;}
+  if(front && std::abs(p - (u - 37)) < 1.05){return false;}
+  if(back && std::abs(p - (u - 35)) < 1.05){return false;}
+  if(left && std::abs(q - (v - 37)) < 1.05){return false;}
+  if(right && std::abs(q - (v - 35)) < 1.05){return false;}
+  return true;
 }
 
 int MachineGameStateWorldmap::OnLogic(){
   if(escPressed){return STATE_MAINMENU;}
-  if(leftPressed){xyRot += M_PI / 360;}
-  if(rightPressed){xyRot -= M_PI / 360;}
+  if(leftPressed){xyRot += M_PI / 150;}
+  if(rightPressed){xyRot -= M_PI / 150;}
+  if(upPressed){yawn += M_PI / 150;}
+  if(downPressed){yawn -= M_PI / 150;}
+  float dirX = -cos(xyRot) / 20,dirY = -sin(xyRot) / 20;
+  float newPosX = fposX,newPosY = fposY;
+  if(aPressed){newPosX -= dirY;newPosY += dirX;}
+  if(sPressed){newPosX -= dirX;newPosY -= dirY;}
+  if(dPressed){newPosX += dirY;newPosY -= dirX;}
+  if(wPressed){newPosX += dirX;newPosY += dirY;}
+  int p = std::round(newPosX),q = std::round(newPosY);
+  if(AttemptMove(newPosX,newPosY)){
+    fposX = newPosX;fposY = newPosY;
+    posX = p;posY = q;
+  } else if(AttemptMove(newPosX,fposY)){
+    fposX = newPosX;
+    posX = p;
+  } else if(AttemptMove(fposX,newPosY)){
+    fposY = newPosY;
+    posY = q;
+  }
+  if(xyRot >= M_PI){xyRot -= M_PI * 2;}
+  if(xyRot <= -M_PI){xyRot += M_PI * 2;}
+  if(yawn >= M_PI / 2){yawn = M_PI / 2 - 0.001;}
+  if(yawn < M_PI / 18){yawn = M_PI / 18;}
   return 0;
 }
 
@@ -386,32 +459,21 @@ void MachineGameStateWorldmap::OnRender(){
   glClear(GL_COLOR_BUFFER_BIT|GL_STENCIL_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
   renderer.UseSpriteAtlas(globalState -> spriteAtlasID);
   renderer.Begin3D();
-  renderer.cameraMat = glm::lookAt(glm::vec3(4 * std::sin(xyRot),6,4 * std::cos(xyRot)),glm::vec3(0,0,0),glm::vec3(0,1,0));
-  GLfloat trigVert[18];
-  GLfloat trigColor[2];
-  for(int i = 0;i < 9;++i){
-    for(int j = 0;j < 9;++j){
-      trigVert[0] = -4.5 + j;
-      trigVert[1] = 0;
-      trigVert[2] = -4.5 + i;
-      trigVert[3] = -3.5 + j;
-      trigVert[4] = 0;
-      trigVert[5] = -4.5 + i;
-      trigVert[6] = -4.5 + j;
-      trigVert[7] = 0;
-      trigVert[8] = -3.5 + i;
-      trigVert[9] = -4.5 + j;
-      trigVert[10] = 0;
-      trigVert[11] = -3.5 + i;
-      trigVert[12] = -3.5 + j;
-      trigVert[13] = 0;
-      trigVert[14] = -3.5 + i;
-      trigVert[15] = -3.5 + j;
-      trigVert[16] = 0;
-      trigVert[17] = -4.5 + i;
-      trigColor[0] = maze[i][j] * 2;
-      trigColor[1] = maze[i][j] * 2 + 1;
-      renderer.Draw3DTriangles(trigVert,trigColor,2);
+  renderer.cameraMat = glm::lookAt(glm::vec3(fposY,0.5 * sin(yawn) + 0.5,fposX),glm::vec3(fposY - 0.5 * std::sin(xyRot) * std::cos(yawn),0.5,fposX - 0.5 * std::cos(xyRot) * std::cos(yawn)),glm::vec3(0,1,0));
+  /*
+  for(int i = 0;i < 81;++i){
+    worldObjects[i]->OnRender();
+  }
+  */
+  for(int i = -10;i <= 10;++i){
+    int ti = posX + i + 36;
+    if(ti < 0){continue;}
+    if(ti > 72){break;}
+    for(int j = -10;j <= 10;++j){
+      int tj = posY + j + 36;
+      if(tj < 0){continue;}
+      if(tj > 72){break;}
+      worldObjects[ti * 73 + tj]->OnRender();
     }
   }
   renderer.End3D();
@@ -419,13 +481,43 @@ void MachineGameStateWorldmap::OnRender(){
   return;
 }
 
-MachineGameStateWorldmap::MachineGameStateWorldmap(GameGlobalState * const globalState) : escPressed(false), leftPressed(false), rightPressed(false){
+MachineGameStateWorldmap::MachineGameStateWorldmap(GameGlobalState * const globalState) : escPressed(false), leftPressed(false), rightPressed(false), aPressed(false), sPressed(false), dPressed(false), wPressed(false), posX(-33), posY(-33), fposX(-33.0), fposY(-33.0), xyRot(0), yawn(M_PI / 4){
   this -> globalState = globalState;
-  renderer.projMat = glm::perspective((M_PI * 45)/180,1.778,0.5,20.0);
-  for(int i = 0;i < 9;++i){
-    for(int j = 0;j < 9;++j){
-      maze[i][j] = randEngine() % 6;
+  renderer.projMat = glm::perspective(M_PI / 4,1.778,0.5,20.0);
+
+  std::ifstream mazedata("maze.txt");
+  char data[100];
+  for(int i = 0;i < 73;++i){
+    mazedata.getline(data,100);
+    for(int j = 0;j < 73;++j){
+      maze[i][j] = 0;
+      if(data[j] == ' '){maze[i][j] = 7;}
+      if(data[j] == '#'){maze[i][j] = 10;}
+    }
+  }
+  for(int i = 0;i < 73;++i){
+    for(int j = 0;j < 73;++j){
+      //maze[i][j] = randEngine() % 6 + 7;
+      if(maze[i][j] < 10){
+	Square * sqr = new Square(-36 + j,0,-36 + i);
+	sqr->texture = maze[i][j];
+	sqr->SetColor();
+	worldObjects[i * 73 + j] = sqr;
+      } else {
+	Cube * cbe = new Cube(-36 + j,0.5,-36 + i);
+	for(int k = 0;k < 6;++k){
+	  cbe->sideTexture[k] = maze[i][j];
+	}
+	cbe->SetColor();
+	worldObjects[i * 73 + j] = cbe;
+      }
     }
   }
   return;
+}
+
+MachineGameStateWorldmap::~MachineGameStateWorldmap(){
+  for(int i = 0;i < 5329;++i){
+    delete worldObjects[i];
+  }
 }

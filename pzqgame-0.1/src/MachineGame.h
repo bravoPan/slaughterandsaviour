@@ -3,6 +3,7 @@
 
 #include "common.h"
 #include "GameGlobalState.h"
+#include "GeomModel.h"
 
 struct MachineGameStateBase{
   virtual void OnKeyDown(const SDL_KeyboardEvent &ev){return;}
@@ -61,11 +62,17 @@ struct MachineGameStateWorldmap : MachineGameStateBase{
   void OnKeyUp(const SDL_KeyboardEvent &ev);
   int OnLogic();
   void OnRender();
+  bool AttemptMove(float newPosX,float newPosY);
   MachineGameStateWorldmap(GameGlobalState* globalState);
+  ~MachineGameStateWorldmap();
 
   bool escPressed,upPressed,downPressed,leftPressed,rightPressed;
-  int maze[9][9];
+  bool aPressed,sPressed,dPressed,wPressed;
+  int maze[73][73];
   double xyRot,yawn;
+  int posX,posY;
+  float fposX,fposY;
+  GeomModel * worldObjects[5329];
   GameGlobalState* globalState;
 };
 
@@ -90,7 +97,7 @@ struct MachineGame{
 
   std::chrono::time_point<std::chrono::steady_clock> currTime,prevTime;
 
-  MachineGame();
+  void Initiate();
 };
 
 #endif

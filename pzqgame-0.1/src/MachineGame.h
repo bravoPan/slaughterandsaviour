@@ -1,15 +1,24 @@
 #ifndef PZQGAME_MACHINEGAME_H
 #define PZQGAME_MACHINEGAME_H
 
-#include "common.h"
+#include <vector>
 #include "GameGlobalState.h"
 #include "GeomModel.h"
+#include "MachineInjection.h"
+#include "Dialogue.h"
+
+struct Quest;
 
 struct MachineGameStateBase{
-  virtual void OnKeyDown(const SDL_KeyboardEvent &ev){return;}
-  virtual void OnKeyUp(const SDL_KeyboardEvent &ev){return;}
-  virtual int OnLogic(){return 0;}
-  virtual void OnRender(){return;}
+  std::vector<MachineInjection *> injections;
+  std::vector<Renderable *> renderObjects;
+  virtual int HandleInjections(int tick){}
+  virtual void HandleRenderObjects(){}
+  virtual void HandleRender2DObjects(){}
+  virtual void OnKeyDown(const SDL_KeyboardEvent &ev){}
+  virtual void OnKeyUp(const SDL_KeyboardEvent &ev){}
+  virtual int OnLogic(int tick){return 0;}
+  virtual void OnRender(){}
 };
 
 enum StateType{
@@ -19,29 +28,22 @@ enum StateType{
 };
 
 struct MachineGameStateMatchGame : MachineGameStateBase{
-  enum MatchGameInnerState{
-			  INNERSTATE_NORMAL,
-			  INNERSTATE_BEGIN,
-			  INNERSTATE_MENU
-  };
-
-  MatchGameInnerState currInnerState;
-  //int animFrame;
-  bool upPressed,downPressed,leftPressed,rightPressed,escPressed;
+  MachineGameStateMatchGame(GameGlobalState * const globalState);
   
   void OnKeyDown(const SDL_KeyboardEvent &ev);
   void OnKeyUp(const SDL_KeyboardEvent &ev);
-  int OnLogic();
+  int OnLogic(int tick);
   void OnRender();
+  int HandleInjections(int tick);
+  void HandleRenderObjects();
+  void HandleRender2DObjects();
   void AddTempBlock(int blockID,int beginPosX,int beginPosY,int endPosX,int endPosY,int totalFrame);
   
   GameGlobalState * globalState;
-  bool GUImodified;
-  int posX,posY;
-  int newPosX,newPosY;
   
-  MachineGameStateMatchGame(GameGlobalState * const globalState);
-
+  bool upPressed,downPressed,leftPressed,rightPressed,escPressed;
+  bool lockControl,canElim;
+  int posX,posY;
   int board[8][8];
   bool boardEmpty[8][8];
 
@@ -53,35 +55,57 @@ struct MachineGameStateMatchGame : MachineGameStateBase{
 
   const int swapSpeed,elimSpeed;
   int currScore;
-
-  int beginAnimFrame;
 };
 
 struct MachineGameStateWorldmap : MachineGameStateBase{
-  void OnKeyDown(const SDL_KeyboardEvent &ev);
-  void OnKeyUp(const SDL_KeyboardEvent &ev);
-  int OnLogic();
-  void OnRender();
-  bool AttemptMove(float newPosX,float newPosY);
   MachineGameStateWorldmap(GameGlobalState* globalState);
   ~MachineGameStateWorldmap();
+  
+  void OnKeyDown(const SDL_KeyboardEvent &ev);
+  void OnKeyUp(const SDL_KeyboardEvent &ev);
+  int OnLogic(int tick);
+  void OnRender();
+  int HandleInjections(int tick);
+  void HandleRenderObjects();
+  void HandleRender2DObjects();
+  bool AttemptMove(float newPosX,float newPosY);
 
-  bool escPressed,upPressed,downPressed,leftPressed,rightPressed;
+  GameGlobalState* globalState;
+  
+  enum WorldmapInnerState{
+			  INNERSTATE_NORMAL,
+			  INNERSTATE_DIALOGUE,
+			  INNERSTATE_TRANS_TO_MATCH_ANIM
+  } currInnerState;
+  bool escPressed,upPressed,downPressed,leftPressed,rightPressed,enterPressed,tPressed;
   bool aPressed,sPressed,dPressed,wPressed;
-  int maze[73][73];
   double xyRot,yawn;
   int posX,posY;
   float fposX,fposY;
   GeomModel * worldObjects[5329];
-  GameGlobalState* globalState;
+
+  //For INNERSTATE_DIALOGUE
+  Dialogue * currDialogue;
+  bool GUIModified;
+
+  //For INNERSTATE_TRANS_TO_MATCH_ANIM
+  int animFrame;
+
+  //For quests
+  bool inQuest;
+  Quest * currQuest;
 };
 
 struct MachineGameStateMainMenu : MachineGameStateBase{
-  void OnKeyDown(const SDL_KeyboardEvent &ev);
-  int OnLogic();
-  void OnRender();
   MachineGameStateMainMenu(GameGlobalState* globalState);
+  void OnKeyDown(const SDL_KeyboardEvent &ev);
+  int OnLogic(int tick);
+  void OnRender();
+  int HandleInjections(int tick);
+  void HandleRenderObjects();
+  void HandleRender2DObjects();
 
+  GameGlobalState * globalState;
   bool downPressed,upPressed,enterPressed;
   int titleAnimFrame;
   int titleLineNo;
@@ -90,14 +114,13 @@ struct MachineGameStateMainMenu : MachineGameStateBase{
 };
 
 struct MachineGame{
-  GameGlobalState globalState;
+  void Initiate();
   void RunGameLoop();
 
   MachineGameStateBase * currState;
+  GameGlobalState globalState;
 
   std::chrono::time_point<std::chrono::steady_clock> currTime,prevTime;
-
-  void Initiate();
 };
 
 #endif

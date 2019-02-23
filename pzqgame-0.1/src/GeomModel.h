@@ -1,13 +1,16 @@
 #ifndef PZQGAME_GEOMMODEL_H
 #define PZQGAME_GEOMMODEL_H
 
-#include "common.h"
+#ifndef GL3_PROTOTYPES
+#define GL3_PROTOTYPES 1
+#endif
+#include <GL/glew.h>
 
 struct GeomModel{
   virtual void OnRender(){}
   virtual void SetPosition(float x,float y,float z){}
   virtual void SetRotation(float yaw,float pitch,float roll){}
-  virtual void SetColor();
+  virtual void SetColor(){};
 };
 
 struct Cube : GeomModel{

@@ -1,7 +1,13 @@
 #ifndef PZQGAME_RENDERER_H
 #define PZQGAME_RENDERER_H
 
-#include "common.h"
+#include <vector>
+#ifndef GL3_PROTOTYPES
+#define GL3_PROTOTYPES 1
+#endif
+#include <GL/glew.h>
+#include <cairo/cairo.h>
+#include <pango/pangocairo.h>
 #include "Sprite.h"
 
 class Renderer{
@@ -17,20 +23,20 @@ class Renderer{
   void Begin3D();
   void End3D();
   void BeginCairo();
-  void EndCairo(bool modified);
+  void EndCairo();
 
   int winW,winH;
   cairo_t *GUIcr;
   PangoLayout *pangoLayout;
   PangoFontDescription *pangoDesc;
   cairo_surface_t *GUIsurface;
-  glm::mat4 cameraMat,projMat,finalMat;
+  glm::mat4 cameraMat,projMat;
 
  private:
   GLuint vertexShader,vertex3DShader,fragmentShader;
   GLuint shaderProgram,shader3DProgram;
   //GLuint emptyTexture;
-  GLuint cameraLoc;
+  GLuint cameraLoc,projLoc;
   
   //We draw triangles in batches of 1000
   GLfloat vertex[6000];
@@ -40,7 +46,7 @@ class Renderer{
   GLfloat color3D[2400];
   int currentBufferPtr;
   int current3DBufferPtr;
-  std::vector < std::shared_ptr < Sprite > > spriteAtlasList;
+  std::vector < Sprite* > spriteAtlasList;
   int currentSpriteAtlas;
   bool mode3D;
 

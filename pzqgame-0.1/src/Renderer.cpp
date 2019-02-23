@@ -73,6 +73,7 @@ void Renderer::Initialize(){
   glGetProgramInfoLog(shader3DProgram,fileLen,&fileLen,shaderlog);
   std::cout << shaderlog << std::endl;
   cameraLoc = glGetUniformLocation(shader3DProgram,"camera");
+  projLoc = glGetUniformLocation(shader3DProgram,"proj");
 
   delete [] shaderlog;
   
@@ -146,13 +147,15 @@ void Renderer::Initialize(){
 
   glStencilMask(0x00);
   glStencilOp(GL_REPLACE,GL_KEEP,GL_KEEP);
+  glEnable(GL_DEPTH_TEST);
+  glDepthFunc(GL_ALWAYS);
 
   FcConfigAppFontAddFile(FcConfigGetCurrent(),(const FcChar8*)"NotoSans-Regular.ttf");
   pangoDesc = pango_font_description_from_string("Noto Sans Regular 36");
 }
 
 int Renderer::RegisterSpriteAtlas(const char *filename,int rows,int columns){
-  spriteAtlasList.push_back(std::shared_ptr < Sprite > (new Sprite(filename,rows,columns)));
+  spriteAtlasList.push_back(new Sprite(filename,rows,columns));
   return spriteAtlasList.size() - 1;
 }
 
@@ -200,8 +203,9 @@ void Renderer::Flush(){
     glBindVertexArray(0);
   } else {
     if(current3DBufferPtr == 0){return;}
-    finalMat = projMat * cameraMat;
-    glUniformMatrix4fv(cameraLoc, 1, GL_FALSE, &finalMat[0][0]);
+    //finalMat = projMat * cameraMat;
+    glUniformMatrix4fv(cameraLoc, 1, GL_FALSE, &cameraMat[0][0]);
+    glUniformMatrix4fv(projLoc, 1, GL_FALSE, &projMat[0][0]);
     glBindVertexArray(vaoID[3]);
     glBindBuffer(GL_ARRAY_BUFFER,vboID[6]);
     glBufferSubData(GL_ARRAY_BUFFER,0,current3DBufferPtr * 3 * sizeof(GLfloat),vertex3D);
@@ -251,7 +255,7 @@ void Renderer::BeginCairo(){
   pango_layout_set_font_description(pangoLayout,pangoDesc);
 }
 
-void Renderer::EndCairo(bool modified){
+void Renderer::EndCairo(){
   if(mode3D){return;}
   g_object_unref(pangoLayout);
   pangoLayout = NULL;
@@ -259,19 +263,18 @@ void Renderer::EndCairo(bool modified){
   GUIcr = NULL;
   //cairo_gl_surface_swapbuffers(GUIsurface);
   //Render GUI to screen
+  Flush();
   glBindVertexArray(vaoID[2]);
   glBindTexture(GL_TEXTURE_2D,GUItex);
-  if(modified){
-    unsigned char *GUIdata = cairo_image_surface_get_data(GUIsurface);
-    glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA,winW,winH,0,GL_BGRA,GL_UNSIGNED_BYTE,GUIdata);
-  }
+  unsigned char *GUIdata = cairo_image_surface_get_data(GUIsurface);
+  glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA,winW,winH,0,GL_BGRA,GL_UNSIGNED_INT_8_8_8_8_REV,GUIdata);
   glDrawArrays(GL_TRIANGLES,0,6);
 }
 
 void Renderer::Begin3D(){
   if(mode3D){return;}
   glUseProgram(shader3DProgram);
-  glEnable(GL_DEPTH_TEST);
+  //glEnable(GL_DEPTH_TEST);
   glDepthFunc(GL_LESS);
   mode3D = true;
 }
@@ -279,7 +282,8 @@ void Renderer::Begin3D(){
 void Renderer::End3D(){
   if(!mode3D){return;}
   Flush();
-  glDisable(GL_DEPTH_TEST);
+  //glDisable(GL_DEPTH_TEST);
+  glDepthFunc(GL_ALWAYS);
   glUseProgram(shaderProgram);
   mode3D = false;
 }

@@ -9,7 +9,6 @@
 #include <cmath>
 #include <ctime>
 #include <vector>
-#include <memory>
 #include <random>
 #include <chrono>
 
@@ -20,15 +19,16 @@
 #define GL3_PROTOTYPES 1
 #include <GL/glew.h>
 
-#include <SDL2/SDL.h>
-#include <SDL2/SDL_image.h>
+#include <SDL.h>
+#include <SDL_image.h>
 
-#include <cairo/cairo.h>
-#include <cairo/cairo-ft.h>
+#include <cairo.h>
+#include <cairo-ft.h>
 #include <fontconfig/fontconfig.h>
 #include <pango/pangocairo.h>
 
 #define GLM_ENABLE_EXPERIMENTAL
+#define GLM_FORCE_RADIANS
 #include "glm/glm.hpp"
 #include "glm/gtc/matrix_transform.hpp"
 #include "glm/gtx/euler_angles.hpp"

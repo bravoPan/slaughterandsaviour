@@ -41,7 +41,6 @@ void Cube::SetPosition(float x,float y,float z){
     trigVert[i * 3 + 1] = vertex[triangle[i]][1] + y;
     trigVert[i * 3 + 2] = vertex[triangle[i]][2] + z;
   }
-  for(i = 0;i < 12;++i){trigColor[i] = 0;}
 }
 
 void Cube::SetColor(){
@@ -87,7 +86,6 @@ void Square::SetPosition(float x,float y,float z){
     trigVert[i * 3 + 1] = vertex[triangle[i]][1] + y;
     trigVert[i * 3 + 2] = vertex[triangle[i]][2] + z;
   }
-  for(i = 0;i < 2;++i){trigColor[i] = 0;}
   posX = x;posY = y;posZ = z;
 }
 

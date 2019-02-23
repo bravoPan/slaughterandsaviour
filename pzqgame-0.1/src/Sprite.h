@@ -1,7 +1,10 @@
 #ifndef PZQGAME_SPRITE_H
 #define PZQGAME_SPRITE_H
 
-#include "common.h"
+#ifndef GL3_PROTOTYPES
+#define GL3_PROTOTYPES
+#endif
+#include <GL/glew.h>
 
 class Sprite
 {

@@ -1,7 +1,12 @@
 #ifndef PZQGAME_GLOBAL_OBJECTS_H
 #define PZQGAME_GLOBAL_OBJECTS_H
 
-#include "common.h"
+#include <SDL.h>
+#include <fontconfig/fontconfig.h>
+#ifndef GL3_PROTOTYPES
+#define GL3_PROTOTYPES 1
+#endif
+#include <GL/glew.h>
 #include "Renderer.h"
 #include "MachineGame.h"
 

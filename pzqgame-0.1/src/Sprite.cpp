@@ -1,8 +1,9 @@
+#include "common.h"
 #include "Sprite.h"
 
 Sprite::Sprite(const char *filename,int rows,int columns){
   SDL_Surface *sprite_image = IMG_Load(filename);
-  SDL_Surface *converted_image = SDL_ConvertSurfaceFormat(sprite_image,SDL_PIXELFORMAT_RGBA32,0);
+  SDL_Surface *converted_image = SDL_ConvertSurfaceFormat(sprite_image,SDL_PIXELFORMAT_ABGR8888,0);
   
   glGenTextures(1,&texID);
   glBindTexture(GL_TEXTURE_2D,texID);

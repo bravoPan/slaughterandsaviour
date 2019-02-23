@@ -55,7 +55,7 @@ bool GlobalInitialize(){
 				"The Demo Game, by Charlie and Gilbert",
 				SDL_WINDOWPOS_CENTERED,
 				SDL_WINDOWPOS_CENTERED,
-				800,600,
+				0,0,
 				SDL_WINDOW_OPENGL|SDL_WINDOW_FULLSCREEN_DESKTOP
 			       );
   if(mainWindow == NULL){
@@ -84,6 +84,18 @@ bool GlobalInitialize(){
   } else {
     std::cout << "VSync Not Enabled" << std::endl;
   }
+
+  SDL_DisplayMode dismode;
+  SDL_GetCurrentDisplayMode(0,&dismode);
+  int w = dismode.w,h = dismode.h;
+  if((float)w / h > 1.7778){
+    w = h * 1.7778;
+  } else {
+    h = w * 0.5625;
+  }
+  int borderWidth = (dismode.w - w) / 2;
+  int borderHeight = (dismode.h - h) / 2;
+  glViewport(borderWidth,borderHeight,w,h);
 
   FT_Init_FreeType(&ftLibrary);
 

@@ -42,4 +42,6 @@ int FirstQuest::Control(MachineGameStateWorldmap *ptr,int tick){
     ptr->worldObjects[73 * 4 + 6]->SetPosition(-30,0.5 - animFrame * 0.001,-32);
     return 0;
   }
+  
+  return 0;
 }

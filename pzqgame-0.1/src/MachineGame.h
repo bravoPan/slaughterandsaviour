@@ -12,7 +12,7 @@ struct Quest;
 struct MachineGameStateBase{
   std::vector<MachineInjection *> injections;
   std::vector<Renderable *> renderObjects;
-  virtual int HandleInjections(int tick){}
+  virtual int HandleInjections(int tick){return 0;}
   virtual void HandleRenderObjects(){}
   virtual void HandleRender2DObjects(){}
   virtual void OnKeyDown(const SDL_KeyboardEvent &ev){}

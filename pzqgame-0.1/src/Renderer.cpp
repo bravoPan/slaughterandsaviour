@@ -150,7 +150,9 @@ void Renderer::Initialize(){
   glEnable(GL_DEPTH_TEST);
   glDepthFunc(GL_ALWAYS);
 
-  FcConfigAppFontAddFile(FcConfigGetCurrent(),(const FcChar8*)"NotoSans-Regular.ttf");
+  fcConf = FcConfigCreate();
+  FcConfigAppFontAddFile(fcConf,(const FcChar8*)"NotoSans-Regular.ttf");
+  FcConfigSetCurrent(fcConf);
   pangoDesc = pango_font_description_from_string("Noto Sans Regular 36");
 }
 

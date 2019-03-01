@@ -4,6 +4,9 @@
 Sprite::Sprite(const char *filename,int rows,int columns){
   SDL_Surface *sprite_image = IMG_Load(filename);
   SDL_Surface *converted_image = SDL_ConvertSurfaceFormat(sprite_image,SDL_PIXELFORMAT_ABGR8888,0);
+
+  bleedWidth = 1.0f / converted_image->w;
+  bleedHeight = 1.0f / converted_image->h;
   
   glGenTextures(1,&texID);
   glBindTexture(GL_TEXTURE_2D,texID);
@@ -40,10 +43,10 @@ void Sprite::GetColorData(int ID,GLfloat dst[]){
   }
   int a = ID / columns;
   int b = ID % columns;
-  GLfloat p = (1.0f / columns) * b;
-  GLfloat q = (1.0f / columns) * (b + 1);
-  GLfloat r = (1.0f / rows) * a;
-  GLfloat s = (1.0f / rows) * (a + 1);
+  GLfloat p = (1.0f / columns) * b + bleedWidth;
+  GLfloat q = (1.0f / columns) * (b + 1) - bleedWidth;
+  GLfloat r = (1.0f / rows) * a + bleedHeight;
+  GLfloat s = (1.0f / rows) * (a + 1) - bleedHeight;
 
   dst[0] = p;dst[1] = r;
   dst[2] = q;dst[3] = r;
@@ -61,10 +64,10 @@ void Sprite::GetHalfColorData(int halfID,GLfloat dst[]){
   }
   int a = ID / columns;
   int b = ID % columns;
-  GLfloat p = (1.0f / columns) * b;
-  GLfloat q = (1.0f / columns) * (b + 1);
-  GLfloat r = (1.0f / rows) * a;
-  GLfloat s = (1.0f / rows) * (a + 1);
+  GLfloat p = (1.0f / columns) * b + bleedWidth;
+  GLfloat q = (1.0f / columns) * (b + 1) - bleedWidth;
+  GLfloat r = (1.0f / rows) * a + bleedHeight;
+  GLfloat s = (1.0f / rows) * (a + 1) - bleedHeight;
 
   if((halfID & 1) == 0){
     dst[0] = p;dst[1] = r;

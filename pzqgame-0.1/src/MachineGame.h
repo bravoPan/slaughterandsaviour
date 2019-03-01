@@ -12,9 +12,7 @@ struct Quest;
 struct MachineGameStateBase{
   std::vector<MachineInjection *> injections;
   std::vector<Renderable *> renderObjects;
-  virtual int HandleInjections(int tick){return 0;}
-  virtual void HandleRenderObjects(){}
-  virtual void HandleRender2DObjects(){}
+  void DestroyInjections();
   virtual void OnKeyDown(const SDL_KeyboardEvent &ev){}
   virtual void OnKeyUp(const SDL_KeyboardEvent &ev){}
   virtual int OnLogic(int tick){return 0;}
@@ -34,9 +32,6 @@ struct MachineGameStateMatchGame : MachineGameStateBase{
   void OnKeyUp(const SDL_KeyboardEvent &ev);
   int OnLogic(int tick);
   void OnRender();
-  int HandleInjections(int tick);
-  void HandleRenderObjects();
-  void HandleRender2DObjects();
   void AddTempBlock(int blockID,int beginPosX,int beginPosY,int endPosX,int endPosY,int totalFrame);
   
   GameGlobalState * globalState;
@@ -65,9 +60,6 @@ struct MachineGameStateWorldmap : MachineGameStateBase{
   void OnKeyUp(const SDL_KeyboardEvent &ev);
   int OnLogic(int tick);
   void OnRender();
-  int HandleInjections(int tick);
-  void HandleRenderObjects();
-  void HandleRender2DObjects();
   bool AttemptMove(float newPosX,float newPosY);
 
   GameGlobalState* globalState;
@@ -101,9 +93,6 @@ struct MachineGameStateMainMenu : MachineGameStateBase{
   void OnKeyDown(const SDL_KeyboardEvent &ev);
   int OnLogic(int tick);
   void OnRender();
-  int HandleInjections(int tick);
-  void HandleRenderObjects();
-  void HandleRender2DObjects();
 
   GameGlobalState * globalState;
   bool downPressed,upPressed,enterPressed;
@@ -115,6 +104,7 @@ struct MachineGameStateMainMenu : MachineGameStateBase{
 
 struct MachineGame{
   void Initiate();
+  void MazeGen();
   void RunGameLoop();
 
   MachineGameStateBase * currState;
@@ -122,5 +112,52 @@ struct MachineGame{
 
   std::chrono::time_point<std::chrono::steady_clock> currTime,prevTime;
 };
+
+template<class T> int HandleInjections(T * state,int tick){
+  auto iter = state->injections.begin();
+  while(iter != state->injections.end()){
+    if((*iter)->finished){
+      delete (*iter);
+      iter = state->injections.erase(iter);
+      continue;
+    }
+    if((*iter)->active){
+      int t = (*iter)->Control(state,tick);
+      if(t != 0){return t;}
+    }
+    ++iter;
+  }
+  return 0;
+}
+
+template<class T> void HandleRenderObjects(T * state){
+  auto iter = state->renderObjects.begin();
+  while(iter != state->renderObjects.end()){
+    if((*iter)->finished){
+      delete (*iter);
+      iter = state->renderObjects.erase(iter);
+      continue;
+    }
+    if((*iter)->active){
+      (*iter)->Render3D();
+    }
+    ++iter;
+  }
+}
+
+template<class T> void HandleRender2DObjects(T * state,cairo_t *cr,PangoLayout *textLayout){
+  auto iter = state->renderObjects.begin();
+  while(iter != state->renderObjects.end()){
+    if((*iter)->finished){
+      delete (*iter);
+      iter = state->renderObjects.erase(iter);
+      continue;
+    }
+    if((*iter)->active){
+      (*iter)->Render2D(cr,textLayout);
+    }
+    ++iter;
+  }
+}
 
 #endif

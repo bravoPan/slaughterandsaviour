@@ -4,70 +4,20 @@
 #include "MachineGame.h"
 #include "GameGlobalState.h"
 #include "Quest.h"
+#include <stack>
 
-#define HANDLEINJECTION(C)			       \
-  int C::HandleInjections(int tick){		       \
-    auto iter = injections.begin();		       \
-    while(iter != injections.end()){		       \
-      if((*iter)->finished){			       \
-	delete (*iter);				       \
-	iter = injections.erase(iter);		       \
-	continue;				       \
-      }						       \
-      if((*iter)->active){			       \
-	int t = (*iter)->Control(this,tick);	       \
-	if(t != 0){return t;}			       \
-      }						       \
-      ++iter;					       \
-    }						       \
-    return 0;					       \
+void MachineGameStateBase::DestroyInjections(){
+  auto iter = injections.begin();
+  while(iter != injections.end()){
+    delete (*iter);
+    ++iter;
   }
-
-#define HANDLERENDEROBJECTS(C)				      \
-  void C::HandleRenderObjects(){			      \
-    auto iter = renderObjects.begin();			      \
-    while(iter != renderObjects.end()){			      \
-      if((*iter)->finished){				      \
-	delete (*iter);					      \
-	iter = renderObjects.erase(iter);		      \
-	continue;					      \
-      }							      \
-      if((*iter)->active){				      \
-	(*iter)->Render3D();				      \
-      }							      \
-      ++iter;						      \
-    }							      \
+  auto iter2 = renderObjects.begin();
+  while(iter2 != renderObjects.end()){
+    delete (*iter2);
+    ++iter2;
   }
-
-#define HANDLERENDER2DOBJECTS(C)				  \
-  void C::HandleRender2DObjects(){				  \
-    cairo_t *cr = renderer.GUIcr;				  \
-    PangoLayout *textLayout = renderer.pangoLayout;		  \
-    auto iter = renderObjects.begin();				  \
-    while(iter != renderObjects.end()){				  \
-      if((*iter)->finished){					  \
-	delete (*iter);						  \
-	iter = renderObjects.erase(iter);			  \
-	continue;						  \
-      }								  \
-      if((*iter)->active){					  \
-	(*iter)->Render2D(cr,textLayout);			  \
-      }								  \
-      ++iter;							  \
-    }								  \
-  }
-
-HANDLEINJECTION(MachineGameStateMatchGame)
-HANDLEINJECTION(MachineGameStateWorldmap)
-HANDLEINJECTION(MachineGameStateMainMenu)
-
-HANDLERENDEROBJECTS(MachineGameStateMatchGame)
-HANDLERENDEROBJECTS(MachineGameStateWorldmap)
-HANDLERENDEROBJECTS(MachineGameStateMainMenu)
-
-HANDLERENDER2DOBJECTS(MachineGameStateMatchGame)
-HANDLERENDER2DOBJECTS(MachineGameStateWorldmap)
-HANDLERENDER2DOBJECTS(MachineGameStateMainMenu)
+}
 
 void MachineGame::RunGameLoop(){
   prevTime = std::chrono::steady_clock::now();
@@ -90,6 +40,7 @@ void MachineGame::RunGameLoop(){
     if(tick >= 8){
       int t = currState->OnLogic(tick);
       if(t != 0){
+	currState->DestroyInjections();
 	delete currState;
 	if(t == STATE_MAINMENU){
 	  currState = new MachineGameStateMainMenu(&globalState);
@@ -131,6 +82,61 @@ void MachineGame::Initiate(){
 
   globalState.inQuest = true;
   globalState.currQuest = new FirstQuest;
+
+  MazeGen();
+}
+
+void MachineGame::MazeGen(){
+  int i,j;
+  char result[25][25];
+  std::memset(result,1,25 * 25);
+  result[1][1] = 0;
+  int count = 1;
+  int currX = 1,currY = 1,currDir = -1;
+  int newX,newY;
+  int dir[4][2] = {{-2,0},{2,0},{0,-2},{0,2}};
+  int perm[4],permGen[4];
+  std::stack<int> xSt,ySt,dirSt;
+  while(count < 144){
+    if(currDir == -1){
+      currDir = randEngine() % 24;
+    }
+    for(i = 0;i < 4;++i){permGen[i] = i;}
+    for(i = 4;i >= 1;--i){
+      int t = currDir % i;
+      perm[4 - i] = permGen[t];
+      currDir /= i;
+      for(j = t;j < 3;++j){permGen[j] = permGen[j + 1];}
+    }
+    for(i = 0;i < 4;++i){
+      newX = currX + dir[perm[i]][0];
+      newY = currY + dir[perm[i]][1];
+      if(newX < 0 || newX > 24){continue;}
+      if(newY < 0 || newY > 24){continue;}
+      if(result[newX][newY] == 0){continue;}
+      result[newX][newY] = 0;
+      result[(currX + newX)/2][(currY + newY)/2] = 0;
+      xSt.push(currX);
+      ySt.push(currY);
+      dirSt.push(currDir);
+      currDir = -1;
+      currX = newX;currY = newY;
+      ++count;
+      break;
+    }
+    if(i < 4){continue;}
+    currX = xSt.top();xSt.pop();
+    currY = ySt.top();ySt.pop();
+    currDir = dirSt.top();dirSt.pop();
+  }
+
+  std::ofstream fout("smallmaze.txt");
+  for(i = 0;i < 25;++i){
+    for(j = 0;j < 25;++j){
+      if(result[i][j]){fout << '#';}else{fout << ' ';}
+    }
+    fout << std::endl;
+  }
 }
 
 void MachineGameStateMatchGame::OnKeyDown(const SDL_KeyboardEvent &ev){
@@ -271,7 +277,7 @@ int MachineGameStateMatchGame::OnLogic(int tick){
     }
   }
 
-  return HandleInjections(tick);
+  return HandleInjections(this,tick);
 }
 
 void MachineGameStateMatchGame::OnRender(){
@@ -316,7 +322,7 @@ void MachineGameStateMatchGame::OnRender(){
   cairo_set_source_rgba(cr,0.0,1.0,0.0,1.0);
   pango_layout_set_text(textLayout,scoreText,-1);
   pango_cairo_show_layout(cr,textLayout);
-  HandleRender2DObjects();
+  HandleRender2DObjects(this,cr,textLayout);
   renderer.EndCairo();
   SDL_GL_SwapWindow(mainWindow);
 }
@@ -497,27 +503,24 @@ void MachineGameStateWorldmap::OnKeyUp(const SDL_KeyboardEvent &ev){
 }
 
 bool MachineGameStateWorldmap::AttemptMove(float newPosX,float newPosY){
-  int p = std::round(newPosX),q = std::round(newPosY);
-  int u = p + 36,v = q + 36;
-  if(globalState->isWall[u][v]){return false;}
-  bool front = false,back = false,left = false,right = false;
-  if(u > 0 && globalState->isWall[u - 1][v]){front = true;}
-  if(u > 0 && v > 0 && globalState->isWall[u - 1][v - 1] && newPosY <= q){front = true;}
-  if(u > 0 && v < 72 && globalState->isWall[u - 1][v + 1] && newPosY >= q){front = true;}
-  if(u < 72 && globalState->isWall[u + 1][v]){back = true;}
-  if(u < 72 && v > 0 && globalState->isWall[u + 1][v - 1] && newPosY <= q){back = true;}
-  if(u < 72 && v > 0 && globalState->isWall[u + 1][v + 1] && newPosY >= q){back = true;}
-  if(v > 0 && globalState->isWall[u][v - 1]){left = true;}
-  if(v > 0 && u > 0 && globalState->isWall[u - 1][v - 1] && newPosX <= p){left = true;}
-  if(v > 0 && u < 72 && globalState->isWall[u + 1][v - 1] && newPosX >= p){left = true;}
-  if(v < 72 && globalState->isWall[u][v + 1]){right = true;}
-  if(v < 72 && u > 0 && globalState->isWall[u - 1][v + 1] && newPosX <= p){right = true;}
-  if(v < 72 && u < 72 && globalState->isWall[u + 1][v + 1] && newPosX >= p){right = true;}
-  
-  if(front && std::abs(newPosX - u + 37.0) < 1.2){return false;}
-  if(back && std::abs(newPosX - u + 35.0) < 1.2){return false;}
-  if(left && std::abs(newPosY - v + 37.0) < 1.2){return false;}
-  if(right && std::abs(newPosY - v + 35.0) < 1.2){return false;}
+  const float testPoints[8][2] = {
+			    {0.7,0},
+			    {-0.7,0},
+			    {0,0.7},
+			    {0,-0.7},
+			    {0.7,0.7},
+			    {0.7,-0.7},
+			    {-0.7,0.7},
+			    {-0.7,-0.7}
+  };
+
+  for(int i = 0;i < 8;++i){
+    int x = std::round(newPosX + testPoints[i][0]) + 36;
+    int y = std::round(newPosY + testPoints[i][1]) + 36;
+    if(x < 0 || x >= 72){return false;}
+    if(y < 0 || y >= 72){return false;}
+    if(globalState->isWall[x][y]){return false;}
+  }
   return true;
 }
 

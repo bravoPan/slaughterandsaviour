@@ -11,6 +11,7 @@ class Sprite
  public:
   GLuint texID;
   int rows,columns;
+  GLfloat bleedWidth,bleedHeight;
 
   Sprite(const char *filename,int rows,int columns);
   ~Sprite();

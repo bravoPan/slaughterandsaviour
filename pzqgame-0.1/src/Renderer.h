@@ -33,6 +33,8 @@ class Renderer{
   glm::mat4 cameraMat,projMat;
 
  private:
+  FcConfig * fcConf;
+  
   GLuint vertexShader,vertex3DShader,fragmentShader;
   GLuint shaderProgram,shader3DProgram;
   //GLuint emptyTexture;

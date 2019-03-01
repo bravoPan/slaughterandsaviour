@@ -9,6 +9,7 @@ out float distToCamera;
 
 void main(void) {
     vec4 t = camera * vec4(in_Position,1.0);
+    t = t / t.w;
     distToCamera = sqrt(t.x * t.x + t.y * t.y + t.z * t.z);
     gl_Position = proj * t;
     ex_Color = in_Color;

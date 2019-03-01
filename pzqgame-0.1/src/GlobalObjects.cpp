@@ -11,6 +11,7 @@ bool vsyncEnabled = false;
 GLuint emptyTexture;
 
 Renderer renderer;
+AudioEngine audioEngine;
 
 FT_Library ftLibrary;
 
@@ -20,7 +21,7 @@ MachineGame machine;
 
 bool GlobalInitialize(){
   //SDL Initialization
-  if(SDL_Init(SDL_INIT_VIDEO) < 0){
+  if(SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) < 0){
     SDL_Log("SDL Initialization failed, %s\n",SDL_GetError());
     return false;
   }
@@ -100,6 +101,7 @@ bool GlobalInitialize(){
   FT_Init_FreeType(&ftLibrary);
 
   renderer.Initialize();
+  audioEngine.Initialize();
 
   glClearColor(0.0,0.0,0.0,1.0);
   glClearStencil(0);
@@ -111,6 +113,7 @@ bool GlobalInitialize(){
   glBindTexture(GL_TEXTURE_2D,emptyTexture);
   glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA,1,1,0,GL_BGRA,GL_UNSIGNED_BYTE,NULL);
   glBindTexture(GL_TEXTURE_2D,0);
+
   return true;
 }
 

@@ -8,6 +8,7 @@
 #endif
 #include <GL/glew.h>
 #include "Renderer.h"
+#include "AudioEngine.h"
 #include "MachineGame.h"
 
 extern SDL_Window *mainWindow;
@@ -22,6 +23,7 @@ extern GLuint emptyTexture;
 extern FT_Library ftLibrary;
 
 extern Renderer renderer;
+extern AudioEngine audioEngine;
 
 extern std::mt19937 randEngine;
 

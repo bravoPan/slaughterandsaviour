@@ -4,6 +4,7 @@
 #include "MachineGame.h"
 #include "GameGlobalState.h"
 #include "Quest.h"
+#include "DisjointSet.h"
 #include <stack>
 
 void MachineGameStateBase::DestroyInjections(){
@@ -12,8 +13,18 @@ void MachineGameStateBase::DestroyInjections(){
     delete (*iter);
     ++iter;
   }
+  iter = backupInjections.begin();
+  while(iter != backupInjections.end()){
+    delete (*iter);
+    ++iter;
+  }
   auto iter2 = renderObjects.begin();
   while(iter2 != renderObjects.end()){
+    delete (*iter2);
+    ++iter2;
+  }
+  iter2 = backupRenderObjects.begin();
+  while(iter2 != backupRenderObjects.end()){
     delete (*iter2);
     ++iter2;
   }
@@ -64,62 +75,103 @@ void MachineGame::Initiate(){
   globalState.spriteAtlasID = renderer.RegisterSpriteAtlas("Sprites.png",3,7);
   globalState.lastState = 3;
   currState = new MachineGameStateMainMenu(&globalState);
-  std::ifstream mazedata("maze.txt");
-  char data[100];
-  for(int i = 0;i < 73;++i){
-    mazedata.getline(data,100);
-    for(int j = 0;j < 73;++j){
-      globalState.maze[i][j] = 0;
-      if(data[j] == ' '){globalState.maze[i][j] = 7;globalState.isWall[i][j] = false;}
-      if(data[j] == '#'){globalState.maze[i][j] = 10;globalState.isWall[i][j] = true;}
-      if(data[j] == 'X'){globalState.maze[i][j] = 11;globalState.isWall[i][j] = true;}
-    }
-  }
+  
   globalState.fposX = -33.0;
   globalState.fposY = -33.0;
   globalState.xyRot = 0;
   globalState.yawn = M_PI / 18;
 
-  globalState.inQuest = true;
-  globalState.currQuest = new FirstQuest;
+  globalState.inQuest = false;
+  globalState.currQuest = NULL;
+
+  for(int i = 0;i < 12;++i){
+    for(int j = 0;j < 12;++j){
+      globalState.questList[i][j] = NULL;
+    }
+  }
 
   MazeGen();
 }
 
 void MachineGame::MazeGen(){
-  int i,j;
+  int i,j,k;
   char result[25][25];
   std::memset(result,1,25 * 25);
-  result[1][1] = 0;
+
+  for(i = 1;i < 25;i += 2){
+    for(j = 1;j < 25;j += 2){
+      result[i][j] = 0;
+    }
+  }
+  DisjointSet thisRow(12),nextRow(12);
+  for(i = 0;i < 12;++i){
+    for(j = 0;j < 11;++j){
+      if((thisRow.Find(j) != thisRow.Find(j + 1)) && (randEngine() % 2 == 0)){
+	result[i * 2 + 1][j * 2 + 2] = 0;
+	thisRow.Union(j,j + 1);
+      }
+    }
+    if(i < 11){
+      for(j = 0;j < 12;++j){
+	if(randEngine() % 2 == 0){
+	  result[i * 2 + 2][j * 2 + 1] = 0;
+	  int t = thisRow.Find(j);
+	  if(thisRow.nextData[t] == -1){
+	    thisRow.nextData[t] = j;
+	  } else {
+	    nextRow.Union(thisRow.nextData[t],j);
+	  }
+	}
+      }
+      for(j = 0;j < 12;++j){
+	int t = thisRow.Find(j);
+	if(thisRow.nextData[t] == -1){
+	  result[i * 2 + 2][j * 2 + 1] = 0;
+	  thisRow.nextData[t] = j;
+	}
+      }
+      thisRow.Copy(nextRow);
+      nextRow.Init();
+    }
+  }
+  for(int i = 0;i < 11;++i){
+    if(thisRow.Find(i) != thisRow.Find(i + 1)){
+      result[23][i * 2 + 2] = 0;
+      thisRow.Union(i,i + 1);
+    }
+  }
+
+  char visited[25][25];
+  std::memset(visited,0,25 * 25);
+  visited[1][1] = 1;
   int count = 1;
-  int currX = 1,currY = 1,currDir = -1;
+  int currX = 1,currY = 1;
   int newX,newY;
-  int dir[4][2] = {{-2,0},{2,0},{0,-2},{0,2}};
-  int perm[4],permGen[4];
-  std::stack<int> xSt,ySt,dirSt;
-  while(count < 144){
-    if(currDir == -1){
-      currDir = randEngine() % 24;
-    }
-    for(i = 0;i < 4;++i){permGen[i] = i;}
-    for(i = 4;i >= 1;--i){
-      int t = currDir % i;
-      perm[4 - i] = permGen[t];
-      currDir /= i;
-      for(j = t;j < 3;++j){permGen[j] = permGen[j + 1];}
-    }
+  static const int dir[4][2] = {{-2,0},{2,0},{0,-2},{0,2}};
+  std::stack<int> xSt,ySt;
+  xSt.push(-1);ySt.push(-1);
+  do{
     for(i = 0;i < 4;++i){
-      newX = currX + dir[perm[i]][0];
-      newY = currY + dir[perm[i]][1];
+      newX = currX + dir[i][0];
+      newY = currY + dir[i][1];
       if(newX < 0 || newX > 24){continue;}
       if(newY < 0 || newY > 24){continue;}
-      if(result[newX][newY] == 0){continue;}
-      result[newX][newY] = 0;
-      result[(currX + newX)/2][(currY + newY)/2] = 0;
+      if(result[(currX + newX)/2][(currY + newY)/2]){continue;}
+      if(visited[newX][newY]){continue;}
+      visited[newX][newY] = 1;
       xSt.push(currX);
       ySt.push(currY);
-      dirSt.push(currDir);
-      currDir = -1;
+
+      Quest * qst = new DestroyGate((currX + newX)/2,(currY + newY)/2,i,0);
+      QuestList * wrp = new QuestList;
+      wrp->qst = qst;
+      wrp->prev = NULL;
+      wrp->next = globalState.questList[(currX - 1)/2][(currY - 1)/2];
+      if(globalState.questList[(currX - 1)/2][(currY - 1)/2] != NULL){
+	globalState.questList[(currX - 1)/2][(currY - 1)/2] -> prev = wrp;
+      }
+      globalState.questList[(currX - 1)/2][(currY - 1)/2] = wrp;
+      
       currX = newX;currY = newY;
       ++count;
       break;
@@ -127,15 +179,39 @@ void MachineGame::MazeGen(){
     if(i < 4){continue;}
     currX = xSt.top();xSt.pop();
     currY = ySt.top();ySt.pop();
-    currDir = dirSt.top();dirSt.pop();
-  }
+  } while(!xSt.empty());
 
-  std::ofstream fout("smallmaze.txt");
-  for(i = 0;i < 25;++i){
-    for(j = 0;j < 25;++j){
-      if(result[i][j]){fout << '#';}else{fout << ' ';}
+  for(i = 0;i < 73;++i){
+    for(j = 0;j < 73;++j){
+      globalState.maze[i][j] = 7;
+      globalState.isWall[i][j] = false;
     }
-    fout << std::endl;
+  }
+  for(i = 0;i < 73;++i){
+    for(j = 0;j < 73;j += 6){
+      globalState.maze[i][j] = 10;
+      globalState.isWall[i][j] = true;
+      globalState.maze[j][i] = 10;
+      globalState.isWall[j][i] = true;
+    }
+  }
+  for(i = 1;i < 24;i += 2){
+    for(j = 2;j < 24;j += 2){
+      if(result[i][j] == 0){
+	for(k = 2;k <= 4;++k){
+	  int p = (i - 1) * 3 + k,q = j * 3;
+	  globalState.maze[p][q] = 11;
+	  globalState.isWall[p][q] = true;
+	}
+      }
+      if(result[j][i] == 0){
+	for(k = 2;k <= 4;++k){
+	  int p = j * 3,q = (i - 1) * 3 + k;
+	  globalState.maze[p][q] = 11;
+	  globalState.isWall[p][q] = true;
+	}
+      }
+    }
   }
 }
 
@@ -154,6 +230,12 @@ void MachineGameStateMatchGame::OnKeyDown(const SDL_KeyboardEvent &ev){
   } else if(ev.keysym.sym == SDLK_RIGHT){
     upPressed = downPressed = leftPressed = rightPressed = false;
     rightPressed = true;
+  } else if(ev.keysym.sym == SDLK_LCTRL || ev.keysym.sym == SDLK_RCTRL){
+    ctrlPressed = true;
+    shiftPressed = false;
+  } else if(ev.keysym.sym == SDLK_LSHIFT || ev.keysym.sym == SDLK_RSHIFT){
+    shiftPressed = true;
+    ctrlPressed = false;
   }
 }
 
@@ -166,7 +248,55 @@ void MachineGameStateMatchGame::OnKeyUp(const SDL_KeyboardEvent &ev){
     leftPressed = false;
   } else if(ev.keysym.sym == SDLK_RIGHT){
     rightPressed = false;
+  } else if(ev.keysym.sym == SDLK_LCTRL || ev.keysym.sym == SDLK_RCTRL){
+    ctrlPressed = false;
+  } else if(ev.keysym.sym == SDLK_LSHIFT || ev.keysym.sym == SDLK_RSHIFT){
+    shiftPressed = false;
   }
+}
+
+void MachineGameStateMatchGame::CyclicMove(int dir,int pos){
+  //dir: 0 -> Counterclockwise, 1 -> Clockwise
+  //pos: 0 -> begin from upperleft corner
+  //     1 ->            upperright corner
+  //     2 ->            lowerright corner
+  //     3 ->            lowerleft corner
+
+  const int x = posX;
+  const int y = posY;
+  const int disp[2][4][2] = {{{1,0},{0,-1},{-1,0},{0,1}},{{0,1},{1,0},{0,-1},{-1,0}}};
+  int u = x,v = y,t = pos;
+  do{
+    if(u < 0 || u >= 8){return;}
+    if(v < 0 || v >= 8){return;}
+    if(board[u][v] == -1 && !boardEmpty[u][v]){return;}
+    u += disp[dir][t][0];
+    v += disp[dir][t][1];
+    if(dir){t = (t + 1) % 4;} else {t = (t + 3) % 4;}
+  }while(t != pos);
+  u = x;v = y;t = pos;
+  do{
+    boardEmpty[u][v] = true;
+    u += disp[dir][t][0];
+    v += disp[dir][t][1];
+    if(dir){t = (t + 1) % 4;} else {t = (t + 3) % 4;}
+  }while(t != pos);
+  u = x;v = y;t = pos;
+  do{
+    AddTempBlock(board[u][v],u,v,u + disp[dir][t][0],v + disp[dir][t][1],swapSpeed);
+    u += disp[dir][t][0];
+    v += disp[dir][t][1];
+    if(dir){t = (t + 1) % 4;} else {t = (t + 3) % 4;}
+  }while(t != pos);
+  u = x;v = y;t = pos;
+  do{
+    board[u][v] = -1;
+    u += disp[dir][t][0];
+    v += disp[dir][t][1];
+    if(dir){t = (t + 1) % 4;} else {t = (t + 3) % 4;}
+  }while(t != pos);
+  posX += disp[dir][pos][0];
+  posY += disp[dir][pos][1];
 }
 
 int MachineGameStateMatchGame::OnLogic(int tick){
@@ -246,37 +376,68 @@ int MachineGameStateMatchGame::OnLogic(int tick){
     renderObjects.push_back(ptr->render);
   }
 
-  if(!lockControl){
-    if(upPressed && posX >= 1 && board[posX][posY] != -1 && !(board[posX - 1][posY] == -1 && !boardEmpty[posX - 1][posY])){
-      boardEmpty[posX][posY] = boardEmpty[posX - 1][posY] = true;
-      AddTempBlock(board[posX][posY],posX,posY,posX - 1,posY,swapSpeed);
-      AddTempBlock(board[posX - 1][posY],posX - 1,posY,posX,posY,swapSpeed);
-      board[posX][posY] = board[posX - 1][posY] = -1;
-      --posX;
-    }
-    if(downPressed && posX <= 6 && board[posX][posY] != -1 && !(board[posX + 1][posY] == -1 && !boardEmpty[posX + 1][posY])){
-      boardEmpty[posX][posY] = boardEmpty[posX + 1][posY] = true;
-      AddTempBlock(board[posX][posY],posX,posY,posX + 1,posY,swapSpeed);
-      AddTempBlock(board[posX + 1][posY],posX + 1,posY,posX,posY,swapSpeed);
-      board[posX][posY] = board[posX + 1][posY] = -1;
-      ++posX;
-    }
-    if(leftPressed && posY >= 1 && board[posX][posY] != -1 && !(board[posX][posY - 1] == -1 && !boardEmpty[posX][posY - 1])){
-      boardEmpty[posX][posY] = boardEmpty[posX][posY - 1] = true;
-      AddTempBlock(board[posX][posY],posX,posY,posX,posY - 1,swapSpeed);
-      AddTempBlock(board[posX][posY - 1],posX,posY - 1,posX,posY,swapSpeed);
-      board[posX][posY] = board[posX][posY - 1] = -1;
-      --posY;
-    }
-    if(rightPressed && posY <= 6 && board[posX][posY] != -1 && !(board[posX][posY + 1] == -1 && !boardEmpty[posX][posY + 1])){
-      boardEmpty[posX][posY] = boardEmpty[posX][posY + 1] = true;
-      AddTempBlock(board[posX][posY],posX,posY,posX,posY + 1,swapSpeed);
-      AddTempBlock(board[posX][posY + 1],posX,posY + 1,posX,posY,swapSpeed);
-      board[posX][posY] = board[posX][posY + 1] = -1;
-      ++posY;
+  if(!lockControl && board[posX][posY] != -1){
+    if(!ctrlPressed && !shiftPressed){
+      if(upPressed && posX >= 1 && !(board[posX - 1][posY] == -1 && !boardEmpty[posX - 1][posY])){
+	boardEmpty[posX][posY] = boardEmpty[posX - 1][posY] = true;
+	AddTempBlock(board[posX][posY],posX,posY,posX - 1,posY,swapSpeed);
+	AddTempBlock(board[posX - 1][posY],posX - 1,posY,posX,posY,swapSpeed);
+	board[posX][posY] = board[posX - 1][posY] = -1;
+	--posX;
+      }
+      if(downPressed && posX <= 6 && !(board[posX + 1][posY] == -1 && !boardEmpty[posX + 1][posY])){
+	boardEmpty[posX][posY] = boardEmpty[posX + 1][posY] = true;
+	AddTempBlock(board[posX][posY],posX,posY,posX + 1,posY,swapSpeed);
+	AddTempBlock(board[posX + 1][posY],posX + 1,posY,posX,posY,swapSpeed);
+	board[posX][posY] = board[posX + 1][posY] = -1;
+	++posX;
+      }
+      if(leftPressed && posY >= 1 && !(board[posX][posY - 1] == -1 && !boardEmpty[posX][posY - 1])){
+	boardEmpty[posX][posY] = boardEmpty[posX][posY - 1] = true;
+	AddTempBlock(board[posX][posY],posX,posY,posX,posY - 1,swapSpeed);
+	AddTempBlock(board[posX][posY - 1],posX,posY - 1,posX,posY,swapSpeed);
+	board[posX][posY] = board[posX][posY - 1] = -1;
+	--posY;
+      }
+      if(rightPressed && posY <= 6 && !(board[posX][posY + 1] == -1 && !boardEmpty[posX][posY + 1])){
+	boardEmpty[posX][posY] = boardEmpty[posX][posY + 1] = true;
+	AddTempBlock(board[posX][posY],posX,posY,posX,posY + 1,swapSpeed);
+	AddTempBlock(board[posX][posY + 1],posX,posY + 1,posX,posY,swapSpeed);
+	board[posX][posY] = board[posX][posY + 1] = -1;
+	++posY;
+      }
+    } else if(ctrlPressed){
+      if(upPressed){
+	CyclicMove(1,3);
+	upPressed = false;
+      } else if(downPressed){
+	CyclicMove(1,1);
+	downPressed = false;
+      } else if(leftPressed){
+	CyclicMove(1,2);
+	leftPressed = false;
+      } else if(rightPressed){
+	CyclicMove(1,0);
+	rightPressed = false;
+      }
+    } else if(shiftPressed){
+      if(upPressed){
+	CyclicMove(0,2);
+	upPressed = false;
+      } else if(downPressed){
+	CyclicMove(0,0);
+	downPressed = false;
+      } else if(leftPressed){
+	CyclicMove(0,1);
+	leftPressed = false;
+      } else if(rightPressed){
+	CyclicMove(0,3);
+	rightPressed = false;
+      }
     }
   }
 
+  if(globalState->inQuest){globalState->currQuest->Control(this,tick);}
   return HandleInjections(this,tick);
 }
 
@@ -443,11 +604,8 @@ void MachineGameStateWorldmap::OnKeyDown(const SDL_KeyboardEvent &ev){
   if(ev.keysym.sym == SDLK_ESCAPE){
     escPressed = true;
   }
-  if(currInnerState == INNERSTATE_DIALOGUE){
-    if(ev.keysym.sym == SDLK_RETURN){
-      enterPressed = true;
-    }
-    return;
+  if(ev.keysym.sym == SDLK_RETURN){
+    enterPressed = true;
   }
   if(ev.keysym.sym == SDLK_LEFT){
     rightPressed = upPressed = downPressed = false;
@@ -531,52 +689,37 @@ int MachineGameStateWorldmap::OnLogic(int tick){
   globalState->yawn = yawn;
   
   if(escPressed){return STATE_MAINMENU;}
-  if(currInnerState == INNERSTATE_DIALOGUE){
-    if(enterPressed){
-      enterPressed = false;
-      currDialogue = currDialogue->NextTurn();
-      if(currDialogue == NULL){
-	currInnerState = INNERSTATE_NORMAL;
-      }
-    }
-    return 0;
-  }
-  if(currInnerState == INNERSTATE_TRANS_TO_MATCH_ANIM){
-    animFrame += tick;
-    if(animFrame >= 1000){return STATE_MATCHGAME;} else {return 0;}
-  }
 
-  if(leftPressed){xyRot += tick * M_PI / 1000;}
-  if(rightPressed){xyRot -= tick * M_PI / 1000;}
-  if(upPressed){yawn += tick * M_PI / 1200;}
-  if(downPressed){yawn -= tick * M_PI / 1200;}
-  float dirX = -cos(xyRot) * tick / 150,dirY = -sin(xyRot) * tick / 150;
-  float newPosX = fposX,newPosY = fposY;
-  if(aPressed){newPosX -= dirY;newPosY += dirX;}
-  if(sPressed){newPosX -= dirX;newPosY -= dirY;}
-  if(dPressed){newPosX += dirY;newPosY -= dirX;}
-  if(wPressed){newPosX += dirX;newPosY += dirY;}
-  int p = std::round(newPosX),q = std::round(newPosY);
-  if(AttemptMove(newPosX,newPosY)){
-    fposX = newPosX;fposY = newPosY;
-    posX = p;posY = q;
-  } else if(AttemptMove(newPosX,fposY)){
-    fposX = newPosX;
-    posX = p;
-  } else if(AttemptMove(fposX,newPosY)){
-    fposY = newPosY;
-    posY = q;
+  if(!lockControl){
+    if(leftPressed){xyRot += tick * M_PI / 1000;}
+    if(rightPressed){xyRot -= tick * M_PI / 1000;}
+    if(upPressed){yawn += tick * M_PI / 1200;}
+    if(downPressed){yawn -= tick * M_PI / 1200;}
+    float dirX = -cos(xyRot) * tick / 150,dirY = -sin(xyRot) * tick / 150;
+    float newPosX = fposX,newPosY = fposY;
+    if(aPressed){newPosX -= dirY;newPosY += dirX;}
+    if(sPressed){newPosX -= dirX;newPosY -= dirY;}
+    if(dPressed){newPosX += dirY;newPosY -= dirX;}
+    if(wPressed){newPosX += dirX;newPosY += dirY;}
+    int p = std::round(newPosX),q = std::round(newPosY);
+    if(AttemptMove(newPosX,newPosY)){
+      fposX = newPosX;fposY = newPosY;
+      posX = p;posY = q;
+    } else if(AttemptMove(newPosX,fposY)){
+      fposX = newPosX;
+      posX = p;
+    } else if(AttemptMove(fposX,newPosY)){
+      fposY = newPosY;
+      posY = q;
+    }
   }
-  if(inQuest){
-    currQuest->Control(this,tick);
-    globalState->inQuest = inQuest;
-    globalState->currQuest = currQuest;
-  }
+  
   if(xyRot >= M_PI){xyRot -= M_PI * 2;}
   if(xyRot <= -M_PI){xyRot += M_PI * 2;}
   if(yawn >= M_PI / 2){yawn = M_PI / 2 - 0.001;}
   if(yawn < M_PI / 18){yawn = M_PI / 18;}
-  return 0;
+  
+  return HandleInjections(this,tick);
 }
 
 void MachineGameStateWorldmap::OnRender(){
@@ -597,37 +740,21 @@ void MachineGameStateWorldmap::OnRender(){
   }
   renderer.End3D();
   
-  if(currInnerState == INNERSTATE_DIALOGUE){
-    renderer.BeginCairo();
-    cairo_t *cr = renderer.GUIcr;
-    PangoLayout *textLayout = renderer.pangoLayout;
-    cairo_set_operator(cr,CAIRO_OPERATOR_SOURCE);
-    cairo_set_source_rgba(cr,0.0,0.0,0.0,0.0);
-    cairo_rectangle(cr,0,0,renderer.winW,renderer.winH);
-    cairo_fill(cr);
-    cairo_set_source_rgba(cr,0.0,0.0,1.0,0.5);
-    cairo_rectangle(cr,60,800,1800,200);
-    cairo_fill(cr);
-    cairo_set_source_rgba(cr,1.0,1.0,1.0,1.0);
-    cairo_move_to(cr,70,820);
-    pango_layout_set_width(textLayout,1800 * PANGO_SCALE);
-    pango_layout_set_markup(textLayout,currDialogue->currLine,-1);
-    pango_cairo_show_layout(cr,textLayout);
-    renderer.EndCairo();
-  } else if(currInnerState == INNERSTATE_TRANS_TO_MATCH_ANIM){
-    renderer.BeginCairo();
-    cairo_t *cr = renderer.GUIcr;
-    cairo_set_operator(cr,CAIRO_OPERATOR_SOURCE);
-    cairo_set_source_rgba(cr,0.0,0.0,0.0,0.001 * animFrame);
-    cairo_rectangle(cr,0,0,renderer.winW,renderer.winH);
-    cairo_fill(cr);
-    renderer.EndCairo();
-  }
+  renderer.BeginCairo();
+  cairo_t *cr = renderer.GUIcr;
+  PangoLayout *textLayout = renderer.pangoLayout;
+  cairo_set_operator(cr,CAIRO_OPERATOR_SOURCE);
+  cairo_set_source_rgba(cr,0.0,0.0,0.0,0.0);
+  cairo_rectangle(cr,0,0,renderer.winW,renderer.winH);
+  cairo_fill(cr);
+  HandleRender2DObjects(this,cr,textLayout);
+  renderer.EndCairo();
+  
   SDL_GL_SwapWindow(mainWindow);
   return;
 }
 
-MachineGameStateWorldmap::MachineGameStateWorldmap(GameGlobalState * const globalState) : escPressed(false), leftPressed(false), rightPressed(false), upPressed(false), downPressed(false), aPressed(false), sPressed(false), dPressed(false), wPressed(false), enterPressed(false), tPressed(false)
+MachineGameStateWorldmap::MachineGameStateWorldmap(GameGlobalState * const globalState) : escPressed(false), leftPressed(false), rightPressed(false), upPressed(false), downPressed(false), aPressed(false), sPressed(false), dPressed(false), wPressed(false), enterPressed(false), tPressed(false), lockControl(false)
 {
   this -> globalState = globalState;
   globalState->lastState = 3;
@@ -637,8 +764,6 @@ MachineGameStateWorldmap::MachineGameStateWorldmap(GameGlobalState * const globa
   posY = std::round(fposY);
   xyRot = globalState->xyRot;
   yawn = globalState->yawn;
-  currInnerState = INNERSTATE_NORMAL;
-  currDialogue = NULL;
   renderer.projMat = glm::perspective(M_PI * 0.278,1.778,0.5,20.0);
   
   for(int i = 0;i < 73;++i){
@@ -659,8 +784,9 @@ MachineGameStateWorldmap::MachineGameStateWorldmap(GameGlobalState * const globa
     }
   }
 
-  inQuest = globalState->inQuest;
-  currQuest = globalState->currQuest;
+  auto inj = new WorldmapQuestBox;
+  injections.push_back(inj);
+  renderObjects.push_back(inj->render);
   return;
 }
 

@@ -10,8 +10,8 @@
 struct Quest;
 
 struct MachineGameStateBase{
-  std::vector<MachineInjection *> injections;
-  std::vector<Renderable *> renderObjects;
+  std::vector<MachineInjection *> injections,backupInjections;
+  std::vector<Renderable *> renderObjects,backupRenderObjects;
   void DestroyInjections();
   virtual void OnKeyDown(const SDL_KeyboardEvent &ev){}
   virtual void OnKeyUp(const SDL_KeyboardEvent &ev){}
@@ -32,11 +32,12 @@ struct MachineGameStateMatchGame : MachineGameStateBase{
   void OnKeyUp(const SDL_KeyboardEvent &ev);
   int OnLogic(int tick);
   void OnRender();
+  void CyclicMove(int dir,int pos);
   void AddTempBlock(int blockID,int beginPosX,int beginPosY,int endPosX,int endPosY,int totalFrame);
   
   GameGlobalState * globalState;
   
-  bool upPressed,downPressed,leftPressed,rightPressed,escPressed;
+  bool upPressed,downPressed,leftPressed,rightPressed,ctrlPressed,shiftPressed,escPressed;
   bool lockControl,canElim;
   int posX,posY;
   int board[8][8];
@@ -64,28 +65,13 @@ struct MachineGameStateWorldmap : MachineGameStateBase{
 
   GameGlobalState* globalState;
   
-  enum WorldmapInnerState{
-			  INNERSTATE_NORMAL,
-			  INNERSTATE_DIALOGUE,
-			  INNERSTATE_TRANS_TO_MATCH_ANIM
-  } currInnerState;
+  bool lockControl;
   bool escPressed,upPressed,downPressed,leftPressed,rightPressed,enterPressed,tPressed;
   bool aPressed,sPressed,dPressed,wPressed;
   double xyRot,yawn;
   int posX,posY;
   float fposX,fposY;
   GeomModel * worldObjects[5329];
-
-  //For INNERSTATE_DIALOGUE
-  Dialogue * currDialogue;
-  bool GUIModified;
-
-  //For INNERSTATE_TRANS_TO_MATCH_ANIM
-  int animFrame;
-
-  //For quests
-  bool inQuest;
-  Quest * currQuest;
 };
 
 struct MachineGameStateMainMenu : MachineGameStateBase{
@@ -95,6 +81,7 @@ struct MachineGameStateMainMenu : MachineGameStateBase{
   void OnRender();
 
   GameGlobalState * globalState;
+  
   bool downPressed,upPressed,enterPressed;
   int titleAnimFrame;
   int titleLineNo;
@@ -127,6 +114,10 @@ template<class T> int HandleInjections(T * state,int tick){
     }
     ++iter;
   }
+  state->injections.insert(state->injections.end(),state->backupInjections.begin(),state->backupInjections.end());
+  state->renderObjects.insert(state->renderObjects.end(),state->backupRenderObjects.begin(),state->backupRenderObjects.end());
+  state->backupInjections.clear();
+  state->backupRenderObjects.clear();
   return 0;
 }
 

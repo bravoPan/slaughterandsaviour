@@ -5,6 +5,9 @@ struct MachineGameStateBase;
 struct MachineGameStateMainMenu;
 struct MachineGameStateWorldmap;
 struct MachineGameStateMatchGame;
+struct Dialogue;
+struct Quest;
+struct QuestList;
 
 struct MachineInjection{
   bool active;
@@ -46,6 +49,48 @@ struct MatchGameVictoryAnim : MachineInjection{
   
   MatchGameVictoryAnim() : animFrame(-1),render(new Render(this)){}
   int Control(MachineGameStateMatchGame *ptr,int tick);
+};
+
+struct WorldmapDialogueBox : MachineInjection{
+  struct Render : Renderable {
+    WorldmapDialogueBox *controller;
+    Render(WorldmapDialogueBox *ptr) : controller(ptr){}
+    void Render2D(cairo_t *cr,PangoLayout *textLayout);
+  } *render;
+
+  Dialogue * diag;
+
+  WorldmapDialogueBox(Dialogue * input) : render(new Render(this)),diag(input){}
+  int Control(MachineGameStateWorldmap *ptr,int tick);
+};
+
+struct WorldmapTransToMatchAnim : MachineInjection{
+  struct Render : Renderable {
+    WorldmapTransToMatchAnim *controller;
+    Render(WorldmapTransToMatchAnim *ptr) : controller(ptr){}
+    void Render2D(cairo_t *cr,PangoLayout *textLayout);
+  } *render;
+
+  int animFrame;
+
+  WorldmapTransToMatchAnim() : render(new Render(this)),animFrame(0){}
+  int Control(MachineGameStateWorldmap *ptr,int tick);
+};
+
+struct WorldmapQuestBox : MachineInjection{
+  struct Render : Renderable {
+    WorldmapQuestBox *controller;
+    Render(WorldmapQuestBox *ptr) : controller(ptr){}
+    void Render2D(cairo_t *cr,PangoLayout *textLayout);
+  } *render;
+  
+  int Control(MachineGameStateWorldmap *ptr,int tick);
+
+  bool displayQuestList;
+  bool inRoom;
+  QuestList * displayedQuest[5];
+
+ WorldmapQuestBox() : displayQuestList(false),render(new Render(this)),displayedQuest{NULL,NULL,NULL,NULL,NULL},inRoom(false){}
 };
 
 #endif

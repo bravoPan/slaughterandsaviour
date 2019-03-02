@@ -2,6 +2,7 @@
 #define PZQGAME_GAMEGLOBALSTATE_H
 
 struct Quest;
+struct QuestList;
 
 struct GameGlobalState{
   char * playerName;
@@ -21,6 +22,7 @@ struct GameGlobalState{
   //For quest
   bool inQuest;
   Quest * currQuest;
+  QuestList * questList[12][12];
 };
 
 #endif

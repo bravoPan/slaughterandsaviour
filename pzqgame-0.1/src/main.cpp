@@ -7,9 +7,13 @@ int main(int argc,char *argv[]){
     return 1;
   }
 
-  //MachineGame machine;
-  machine.Initiate();
-  machine.RunGameLoop();
+  try{
+    //MachineGame machine;
+    machine.Initiate();
+    machine.RunGameLoop();
+  } catch(std::exception &e){
+    std::cout << e.what() << std::endl;
+  }
 
   GlobalFinalize();
   return 0;

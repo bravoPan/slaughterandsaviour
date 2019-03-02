@@ -3,19 +3,39 @@
 
 #include "MachineInjection.h"
 
-//struct MachineGameStateBase;
-//struct MachineGameStateWorldmap;
-
-struct Quest : MachineInjection{
+struct Quest{
   virtual int Control(MachineGameStateWorldmap *ptr,int tick){return 0;}
+  virtual int Control(MachineGameStateMatchGame *ptr,int tick){return 0;}
+  int stage;
+  char title[50];
+  Quest() : stage(0),title{0}{}
 };
 
+struct QuestList{
+  Quest * qst;
+  QuestList *prev,*next;
+};
+
+/*
 struct FirstQuest : Quest{
   int Control(MachineGameStateWorldmap *ptr,int tick);
-  FirstQuest();
+  int Control(MachineGameStateMatchGame *ptr,int tick);
 
-  int stage;
   int animFrame;
+};
+*/
+
+struct DestroyGate : Quest{
+  int Control(MachineGameStateWorldmap *ptr,int tick);
+  int Control(MachineGameStateMatchGame *ptr,int tick);
+
+  int gate[3];
+  float gateDir;
+  int animFrame;
+  int animPosX,animPosY;
+  int goalScore;
+
+  DestroyGate(int x,int y,int dir,int goal);
 };
 
 #endif

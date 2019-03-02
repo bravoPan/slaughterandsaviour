@@ -5,8 +5,8 @@
 void AudioEngine::Initialize(){
   int i,ret;
   
-  ret = avformat_open_input(&musicFormatCtx,"music.ogg",NULL,NULL);
-  ret = avformat_find_stream_info(musicFormatCtx,NULL);
+  if((ret = avformat_open_input(&musicFormatCtx,"music.ogg",NULL,NULL)) < 0){return;}
+  if((ret = avformat_find_stream_info(musicFormatCtx,NULL)) < 0){return;}
   musicStream = av_find_best_stream(musicFormatCtx,AVMEDIA_TYPE_AUDIO,-1,-1,&musicCodec,0);
   musicCodecCtx = avcodec_alloc_context3(musicCodec);
   avcodec_parameters_to_context(musicCodecCtx,musicFormatCtx->streams[musicStream]->codecpar);

@@ -6,7 +6,7 @@ in  vec2 ex_Color;
 out vec4 out_Color;
 
 void main(void) {
-    vec4 t = texture(texturedata,ex_Color);
+	vec4 t = texture(texturedata,ex_Color);
 	float dist = distToCamera;
 	vec4 fogColor = vec4(0.0,0.0,0.0,1.0);
 	float alpha = exp(-(dist - 5) * 1.2);

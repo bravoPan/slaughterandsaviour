@@ -44,7 +44,7 @@ void DisjointSet::Copy(DisjointSet &rhs){
 }
 
 DisjointSet::~DisjointSet(){
-  delete data;
-  delete rank;
-  delete nextData;
+  delete[] data;
+  delete[] rank;
+  delete[] nextData;
 }

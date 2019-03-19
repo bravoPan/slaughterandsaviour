@@ -4,13 +4,17 @@
 
 void AudioEngine::Initialize(){
   int i,ret;
-  
+
+  fmusic = fopen("music.ogg","rb");
+  ov_open_callbacks(fmusic,&musicFile,NULL,0,OV_CALLBACKS_NOCLOSE);
+  /*
   if((ret = avformat_open_input(&musicFormatCtx,"music.ogg",NULL,NULL)) < 0){return;}
   if((ret = avformat_find_stream_info(musicFormatCtx,NULL)) < 0){return;}
   musicStream = av_find_best_stream(musicFormatCtx,AVMEDIA_TYPE_AUDIO,-1,-1,&musicCodec,0);
   musicCodecCtx = avcodec_alloc_context3(musicCodec);
   avcodec_parameters_to_context(musicCodecCtx,musicFormatCtx->streams[musicStream]->codecpar);
   avcodec_open2(musicCodecCtx,musicCodec,NULL);
+  */
 
   SDL_AudioSpec wantedSpec,spec;
   wantedSpec.freq = 44100;
@@ -21,9 +25,11 @@ void AudioEngine::Initialize(){
   wantedSpec.callback = AudioCallBack;
   wantedSpec.userdata = this;
 
+  /*
   swrCtx = swr_alloc();
   swrCtx = swr_alloc_set_opts(swrCtx,AV_CH_LAYOUT_STEREO,AV_SAMPLE_FMT_S16,44100,musicCodecCtx->channel_layout,musicCodecCtx->sample_fmt,musicCodecCtx->sample_rate,0,NULL);
   swr_init(swrCtx);
+  */
   
   devID = SDL_OpenAudioDevice(NULL,0,&wantedSpec,&spec,0);
 
@@ -37,6 +43,38 @@ void AudioEngine::Initialize(){
 }
 
 int PacketReader(void * eng){
+  AudioEngine * audioEng = (AudioEngine*)eng;
+  AudioPacketQueue * audioQueue = &(audioEng->aQueue);
+  SDL_LockMutex(audioQueue->workMutex);
+  AudioPacket * pktl;
+  int currSection;
+  while(!quitGame){
+    if(audioQueue->nb_packets >= 100){SDL_CondWait(audioQueue->cond,audioQueue->workMutex);}
+
+    pktl = new AudioPacket;
+    int ret = ov_read(&(audioEng->musicFile),pktl->data,4096,0,2,1,&currSection);
+
+    if(ret > 0){
+      pktl->len = ret;
+      SDL_LockMutex(audioQueue->mutex);
+      if(audioQueue->last_pkt == NULL){
+	audioQueue->first_pkt = pktl;
+      } else {
+	audioQueue->last_pkt->next = pktl;
+      }
+      audioQueue->last_pkt = pktl;
+      ++(audioQueue->nb_packets);
+      audioQueue->size += pktl->len;
+      SDL_UnlockMutex(audioQueue->mutex);
+    } else {
+      fclose(audioEng->fmusic);
+      audioEng->fmusic = fopen("music.ogg","rb");
+      ov_open_callbacks(audioEng->fmusic,&(audioEng->musicFile),NULL,0,OV_CALLBACKS_NOCLOSE);
+    }
+  }
+  SDL_UnlockMutex(audioQueue->workMutex);
+  return 0;
+  /*
   AudioEngine * audioEng = (AudioEngine*)eng;
   AVFormatContext * musicFormatCtx = audioEng->musicFormatCtx;
   int musicStream = audioEng->musicStream;
@@ -68,8 +106,10 @@ int PacketReader(void * eng){
   }
   SDL_UnlockMutex(audioQueue->workMutex);
   return 0;
+  */
 }
 
+/*
 int AudioDecodeFrame(AVCodecContext * audioCodecCtx,Uint8 * audioBuf,int bufSize,AudioPacketQueue * audioQueue,SwrContext * swrCtx){
   static AVPacket pkt;
   static AVFrame frame;
@@ -107,8 +147,50 @@ int AudioDecodeFrame(AVCodecContext * audioCodecCtx,Uint8 * audioBuf,int bufSize
   if(ret < 0){hasPacket = false;}
   return outputLen;
 }
+*/
 
 void AudioCallBack(void * eng,Uint8 * stream,int len){
+  static char audioBuf[4096];
+  AudioEngine * audioEng = (AudioEngine *)eng;
+  AudioPacketQueue * audioQueue = &(audioEng->aQueue);
+  static int audioBufLen = 0,audioBufPtr = 0;
+  int streamPtr = 0,pktPtr;
+  while(streamPtr < len && audioBufPtr < audioBufLen){
+    stream[streamPtr++] = audioBuf[audioBufPtr++];
+  }
+  if(audioQueue->nb_packets <= 50){
+    SDL_CondBroadcast(audioQueue->cond);
+  }
+  while(streamPtr < len){
+    if(audioQueue->first_pkt == NULL){break;}
+    SDL_LockMutex(audioQueue->mutex);
+    AudioPacket *pktl = audioQueue->first_pkt;
+    audioQueue->first_pkt = pktl->next;
+    if(pktl->next == NULL){
+      audioQueue->last_pkt = NULL;
+    }
+    --(audioQueue->nb_packets);
+    audioQueue->size -= pktl->len;
+    SDL_UnlockMutex(audioQueue->mutex);
+    pktPtr = 0;
+    while(streamPtr < len && pktPtr < pktl->len){
+      stream[streamPtr++] = pktl->data[pktPtr++];
+    }
+    if(pktPtr < pktl->len){
+      audioBufLen = pktl->len - pktPtr;
+      audioBufPtr = 0;
+      while(audioBufPtr < audioBufLen){
+	audioBuf[audioBufPtr++] = pktl->data[pktPtr++];
+      }
+    }
+    delete pktl;
+  }
+  if(streamPtr < len){
+    while(streamPtr < len){
+      stream[streamPtr++] = 0;
+    }
+  }
+  /*
   AudioEngine * audioEng = (AudioEngine *)eng;
   static Uint8 audioBuf[300000];
   static unsigned int audioBufSize = 0,audioBufIndex = 0;
@@ -131,4 +213,5 @@ void AudioCallBack(void * eng,Uint8 * stream,int len){
     stream += m;
     audioBufIndex += m;
   }
+  */
 }

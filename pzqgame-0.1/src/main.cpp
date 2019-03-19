@@ -8,7 +8,6 @@ int main(int argc,char *argv[]){
   }
 
   try{
-    //MachineGame machine;
     machine.Initiate();
     machine.RunGameLoop();
   } catch(std::exception &e){

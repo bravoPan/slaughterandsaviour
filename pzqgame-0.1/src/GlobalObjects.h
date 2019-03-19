@@ -2,7 +2,7 @@
 #define PZQGAME_GLOBAL_OBJECTS_H
 
 #include <SDL.h>
-#include <fontconfig/fontconfig.h>
+//#include <fontconfig/fontconfig.h>
 #ifndef GL3_PROTOTYPES
 #define GL3_PROTOTYPES 1
 #endif
@@ -16,11 +16,9 @@ extern SDL_GLContext mainContext;
 extern bool quitGame;
 extern bool vsyncEnabled;
 
-//extern GLuint vertexShader,fragmentShader;
-//extern GLuint shaderProgram;
 extern GLuint emptyTexture;
 
-extern FT_Library ftLibrary;
+//extern FT_Library ftLibrary;
 
 extern Renderer renderer;
 extern AudioEngine audioEngine;
@@ -31,6 +29,7 @@ extern MachineGame machine;
 
 bool GlobalInitialize();
 void GlobalFinalize();
-char* ReadWholeFile(const char *filename,int *fileLen);
+char * ReadWholeFile(const char *filename,int *fileLen);
+unsigned char * ReadPNG(const char * filename,unsigned int * width,unsigned int * height);
 
 #endif

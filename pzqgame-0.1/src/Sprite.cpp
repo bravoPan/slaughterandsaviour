@@ -1,12 +1,13 @@
 #include "common.h"
+#include "GlobalObjects.h"
 #include "Sprite.h"
 
 Sprite::Sprite(const char *filename,int rows,int columns){
-  SDL_Surface *sprite_image = IMG_Load(filename);
-  SDL_Surface *converted_image = SDL_ConvertSurfaceFormat(sprite_image,SDL_PIXELFORMAT_ABGR8888,0);
+  unsigned int w,h;
+  unsigned char * imageData = ReadPNG(filename,&w,&h);
 
-  bleedWidth = 1.0f / converted_image->w;
-  bleedHeight = 1.0f / converted_image->h;
+  bleedWidth = 1.0f / w;
+  bleedHeight = 1.0f / h;
   
   glGenTextures(1,&texID);
   glBindTexture(GL_TEXTURE_2D,texID);
@@ -15,13 +16,9 @@ Sprite::Sprite(const char *filename,int rows,int columns){
   glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
 
-  glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA,converted_image->w,converted_image->h,0,GL_BGRA,GL_UNSIGNED_INT_8_8_8_8_REV,converted_image->pixels);
-
-  static const GLint swizzle[] = {GL_BLUE,GL_GREEN,GL_RED,GL_ALPHA};
-  glTexParameteriv(GL_TEXTURE_2D,GL_TEXTURE_SWIZZLE_RGBA,swizzle);
-
-  SDL_FreeSurface(sprite_image);
-  SDL_FreeSurface(converted_image);
+  glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA,w,h,0,GL_BGRA,GL_UNSIGNED_INT_8_8_8_8_REV,imageData);
+  
+  delete [] imageData;
   glBindTexture(GL_TEXTURE_2D,0);
 
   this->rows = rows;

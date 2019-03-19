@@ -1,5 +1,5 @@
-LDADD = -lm -lavcodec -lavformat -lavutil -lswresample @DEPENDENCIES_LIBS@
+LDADD = -lavcodec -lavformat -lavutil -lswresample @DEPENDENCIES_LIBS@
 AM_CPPFLAGS = @DEPENDENCIES_CFLAGS@
 bin_PROGRAMS = PZQGame
-PZQGame_SOURCES = main.cpp MachineInjection.cpp Dialogue.cpp Quest.cpp Renderer.cpp AudioEngine.cpp GlobalObjects.cpp GeomModel.cpp MachineGame.cpp DisjointSet.cpp Sprite.cpp common.h MachineInjection.h Dialogue.h Quest.h Renderer.h AudioEngine.h GlobalObjects.h GeomModel.h MachineGame.h DisjointSet.h Sprite.h GameGlobalState.h
+PZQGame_SOURCES = main.cpp MachineInjection.cpp Dialogue.cpp Quest.cpp Renderer.cpp AudioEngine.cpp GlobalObjects.cpp GeomModel.cpp MachineGame.cpp DisjointSet.cpp Sprite.cpp Font.cpp common.h MachineInjection.h Dialogue.h Quest.h Renderer.h AudioEngine.h GlobalObjects.h GeomModel.h MachineGame.h DisjointSet.h Sprite.h GameGlobalState.h Font.h
 EXTRA_DIST = glm

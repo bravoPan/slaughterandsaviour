@@ -2,18 +2,14 @@
 #include "GlobalObjects.h"
 
 SDL_Window *mainWindow = NULL;
-SDL_GLContext mainContext = NULL,cairoContext = NULL;
+SDL_GLContext mainContext = NULL;
 bool quitGame = false;
 bool vsyncEnabled = false;
 
-//GLuint vertexShader,fragmentShader;
-//GLuint shaderProgram;
 GLuint emptyTexture;
 
 Renderer renderer;
 AudioEngine audioEngine;
-
-FT_Library ftLibrary;
 
 std::mt19937 randEngine(std::time(0));
 
@@ -23,11 +19,6 @@ bool GlobalInitialize(){
   //SDL Initialization
   if(SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) < 0){
     SDL_Log("SDL Initialization failed, %s\n",SDL_GetError());
-    return false;
-  }
-
-  if(IMG_Init(IMG_INIT_PNG) != IMG_INIT_PNG){
-    SDL_Log("SDL Image Initialization failed, %s\n",IMG_GetError());
     return false;
   }
 
@@ -70,8 +61,6 @@ bool GlobalInitialize(){
     return false;
   }
 
-  SDL_GL_SetAttribute(SDL_GL_SHARE_WITH_CURRENT_CONTEXT,1);
-
   glewExperimental = GL_TRUE;
   GLenum err = glewInit();
   if(err != GLEW_OK){
@@ -98,8 +87,6 @@ bool GlobalInitialize(){
   int borderHeight = (dismode.h - h) / 2;
   glViewport(borderWidth,borderHeight,w,h);
 
-  FT_Init_FreeType(&ftLibrary);
-
   renderer.Initialize();
   audioEngine.Initialize();
 
@@ -118,9 +105,7 @@ bool GlobalInitialize(){
 }
 
 void GlobalFinalize(){
-  FT_Done_FreeType(ftLibrary);
   glUseProgram(0);
-  //glDeleteProgram(shaderProgram);
   SDL_GL_DeleteContext(mainContext);
   SDL_DestroyWindow(mainWindow);
   SDL_Quit();
@@ -142,4 +127,24 @@ char* ReadWholeFile(const char *filename,int *length){
   } else {
     return NULL;
   }
+}
+
+unsigned char * ReadPNG(const char * filename,unsigned int * width,unsigned int * height){
+  FILE * fin = fopen(filename,"rb");
+  png_structp png_ptr;
+  png_infop info_ptr;
+  png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING,NULL,NULL,NULL);
+  info_ptr = png_create_info_struct(png_ptr);
+  png_init_io(png_ptr,fin);
+  png_read_png(png_ptr,info_ptr,PNG_TRANSFORM_BGR,0);
+  png_get_IHDR(png_ptr,info_ptr,width,height,NULL,NULL,NULL,NULL,NULL);
+  png_bytepp data = png_get_rows(png_ptr,info_ptr);
+  unsigned char * result = new unsigned char[(*width) * (*height) * 4];
+  for(int i = 0;i < *height;++i){
+    for(int j = 0;j < *width * 4;++j){
+      result[i * (*width) * 4 + j] = data[i][j];
+    }
+  }
+  png_destroy_read_struct(&png_ptr,&info_ptr,NULL);
+  return result;
 }

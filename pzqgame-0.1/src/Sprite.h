@@ -6,9 +6,8 @@
 #endif
 #include <GL/glew.h>
 
-class Sprite
+struct Sprite
 {
- public:
   GLuint texID;
   int rows,columns;
   GLfloat bleedWidth,bleedHeight;

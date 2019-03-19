@@ -24,7 +24,7 @@ struct Renderable{
   bool finished;
   Renderable() : active(true), finished(false){}
   virtual void Render3D(){}
-  virtual void Render2D(cairo_t *cr,PangoLayout *textLayout){}
+  virtual void Render2D(){}
 };
 
 struct MatchGameBeginAnim : MachineInjection{
@@ -32,7 +32,7 @@ struct MatchGameBeginAnim : MachineInjection{
   struct Render : Renderable {
     MatchGameBeginAnim *controller;
     Render(MatchGameBeginAnim *ptr) : controller(ptr){}
-    void Render2D(cairo_t *cr,PangoLayout *textLayout);
+    void Render2D();
   } *render;
   
   MatchGameBeginAnim() : animFrame(0),render(new Render(this)){}
@@ -44,13 +44,14 @@ struct MatchGameVictoryAnim : MachineInjection{
   struct Render : Renderable {
     MatchGameVictoryAnim *controller;
     Render(MatchGameVictoryAnim *ptr) : controller(ptr){}
-    void Render2D(cairo_t *cr,PangoLayout *textLayout);
+    void Render2D();
   } *render;
   
   MatchGameVictoryAnim() : animFrame(-1),render(new Render(this)){}
   int Control(MachineGameStateMatchGame *ptr,int tick);
 };
 
+/*
 struct WorldmapDialogueBox : MachineInjection{
   struct Render : Renderable {
     WorldmapDialogueBox *controller;
@@ -63,12 +64,13 @@ struct WorldmapDialogueBox : MachineInjection{
   WorldmapDialogueBox(Dialogue * input) : render(new Render(this)),diag(input){}
   int Control(MachineGameStateWorldmap *ptr,int tick);
 };
+*/
 
 struct WorldmapTransToMatchAnim : MachineInjection{
   struct Render : Renderable {
     WorldmapTransToMatchAnim *controller;
     Render(WorldmapTransToMatchAnim *ptr) : controller(ptr){}
-    void Render2D(cairo_t *cr,PangoLayout *textLayout);
+    void Render2D();
   } *render;
 
   int animFrame;
@@ -81,7 +83,7 @@ struct WorldmapQuestBox : MachineInjection{
   struct Render : Renderable {
     WorldmapQuestBox *controller;
     Render(WorldmapQuestBox *ptr) : controller(ptr){}
-    void Render2D(cairo_t *cr,PangoLayout *textLayout);
+    void Render2D();
   } *render;
   
   int Control(MachineGameStateWorldmap *ptr,int tick);

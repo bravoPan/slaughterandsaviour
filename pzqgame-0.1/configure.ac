@@ -11,7 +11,7 @@ AC_PROG_CXX
 AC_PROG_CC
 
 # Checks for libraries.
-PKG_CHECK_MODULES([DEPENDENCIES], [pangocairo pango cairo fontconfig freetype2 glew sdl2 SDL2_image])
+PKG_CHECK_MODULES([DEPENDENCIES], [glew sdl2 libpng vorbisfile])
 
 AC_CANONICAL_HOST
 case "${host_os}" in

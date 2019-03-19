@@ -6,9 +6,8 @@
 #define GL3_PROTOTYPES 1
 #endif
 #include <GL/glew.h>
-#include <cairo/cairo.h>
-#include <pango/pangocairo.h>
 #include "Sprite.h"
+#include "Font.h"
 
 class Renderer{
  public:
@@ -19,26 +18,21 @@ class Renderer{
   void DrawQuads(int quadArray[],int num);
   void DrawStencil(int left,int right,int bottom,int top);
   void Draw3DTriangles(GLfloat trigVertArray[],GLfloat trigColorArray[],int num);
+  void DrawPureColor(int left,int right,int bottom,int top,float r,float g,float b,float a);
+  void DrawText(const char * text,int left,int top,int width,int point,float r,float g,float b,float a);
+  int GetTextWidth(const char * text,int lineHeight);
   void Flush();
   void Begin3D();
   void End3D();
-  void BeginCairo();
-  void EndCairo();
 
   int winW,winH;
-  cairo_t *GUIcr;
-  PangoLayout *pangoLayout;
-  PangoFontDescription *pangoDesc;
-  cairo_surface_t *GUIsurface;
   glm::mat4 cameraMat,projMat;
 
  private:
-  FcConfig * fcConf;
-  
-  GLuint vertexShader,vertex3DShader,fragmentShader;
-  GLuint shaderProgram,shader3DProgram;
+  GLuint vertexShader,vertex3DShader,fragmentShader,fragmentTextShader;
+  GLuint shaderProgram,shader3DProgram,textProgram;
   //GLuint emptyTexture;
-  GLuint cameraLoc,projLoc;
+  GLuint cameraLoc,projLoc,textColorLoc;
   
   //We draw triangles in batches of 1000
   GLfloat vertex[6000];
@@ -49,6 +43,7 @@ class Renderer{
   int currentBufferPtr;
   int current3DBufferPtr;
   std::vector < Sprite* > spriteAtlasList;
+  Font * fontTexture;
   int currentSpriteAtlas;
   bool mode3D;
 

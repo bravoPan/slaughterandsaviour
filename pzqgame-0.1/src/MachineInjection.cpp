@@ -16,7 +16,7 @@ int MatchGameBeginAnim::Control(MachineGameStateMatchGame *ptr,int tick){
   return 0;
 }
 
-void MatchGameBeginAnim::Render::Render2D(cairo_t *cr,PangoLayout *textLayout){
+void MatchGameBeginAnim::Render::Render2D(){
   renderer.DrawQuad(723,1571,116,964,13 + controller->animFrame / 1000);
 }
 
@@ -40,34 +40,22 @@ int MatchGameVictoryAnim::Control(MachineGameStateMatchGame *ptr,int tick){
   return 0;
 }
 
-void MatchGameVictoryAnim::Render::Render2D(cairo_t *cr,PangoLayout *textLayout){
+void MatchGameVictoryAnim::Render::Render2D(){
   int animFrame = controller->animFrame;
   if(animFrame < 0){return;}
   if(animFrame <= 1000){
-    cairo_set_source_rgba(cr,0.0,0.0,0.0,(1.0 / 2000) * animFrame);
-    cairo_rectangle(cr,0,0,renderer.winW,renderer.winH);
-    cairo_fill(cr);
+    renderer.DrawPureColor(0,1920,0,1080,0,0,0,1.0 / 2000 * animFrame);
   } else {
-    cairo_set_source_rgba(cr,0.0,0.0,0.0,0.5);
-    cairo_rectangle(cr,0,0,renderer.winW,renderer.winH);
-    cairo_fill(cr);
-    cairo_set_source_rgba(cr,1.0,0.0,0.0,1.0);
-    pango_layout_set_markup(textLayout,"<span font='120'>Victory!</span>",-1);
-    int tw,th;
-    pango_layout_get_pixel_size(textLayout,&tw,&th);
-    tw /= 2;
-    th /= 2;
-    cairo_move_to(cr,renderer.winW / 2 - tw,renderer.winH / 2 - th);
-    pango_cairo_show_layout(cr,textLayout);
+    renderer.DrawPureColor(0,1920,0,1080,0,0,0,0.5);
+    int width = renderer.GetTextWidth("Victory!",120);
+    renderer.DrawText("Victory!",960 - width / 2,600,width + 10,120,1,0,0,1);
     if(animFrame >= 2000){
-      cairo_set_operator(cr,CAIRO_OPERATOR_OVER);
-      cairo_set_source_rgba(cr,0.0,0.0,0.0,(1.0 / 1000) * (animFrame - 2000));
-      cairo_rectangle(cr,0,0,renderer.winW,renderer.winH);
-      cairo_fill(cr);
+      renderer.DrawPureColor(0,1920,0,1080,0,0,0,1.0 / 1000 * (animFrame - 2000));
     }
   }
 }
 
+/*
 int WorldmapDialogueBox::Control(MachineGameStateWorldmap *ptr,int tick){
   ptr->lockControl = true;
   if(ptr->enterPressed){
@@ -92,6 +80,7 @@ void WorldmapDialogueBox::Render::Render2D(cairo_t *cr,PangoLayout *textLayout){
   pango_layout_set_markup(textLayout,controller->diag->currLine,-1);
   pango_cairo_show_layout(cr,textLayout);
 }
+*/
 
 int WorldmapTransToMatchAnim::Control(MachineGameStateWorldmap *ptr,int tick){
   animFrame += tick;
@@ -103,10 +92,8 @@ int WorldmapTransToMatchAnim::Control(MachineGameStateWorldmap *ptr,int tick){
   return 0;
 }
 
-void WorldmapTransToMatchAnim::Render::Render2D(cairo_t *cr,PangoLayout *textLayout){
-  cairo_set_source_rgba(cr,0.0,0.0,0.0,0.001 * controller->animFrame);
-  cairo_rectangle(cr,0,0,renderer.winW,renderer.winH);
-  cairo_fill(cr);
+void WorldmapTransToMatchAnim::Render::Render2D(){
+  renderer.DrawPureColor(0,1920,0,1080,0,0,0,0.001 * controller->animFrame);
 }
 
 int WorldmapQuestBox::Control(MachineGameStateWorldmap *ptr,int tick){
@@ -180,31 +167,17 @@ int WorldmapQuestBox::Control(MachineGameStateWorldmap *ptr,int tick){
   }
 }
 
-void WorldmapQuestBox::Render::Render2D(cairo_t *cr,PangoLayout *textLayout){
+void WorldmapQuestBox::Render::Render2D(){
   if(!controller->displayQuestList){return;}
-  cairo_set_source_rgba(cr,0.0,0.0,1.0,0.5);
-  cairo_rectangle(cr,500,200,1000,500);
-  cairo_fill(cr);
-  cairo_set_source_rgba(cr,1.0,1.0,1.0,1.0);
+  renderer.DrawPureColor(500,1500,580,880,0,0,1.0,0.5);
   if(controller->displayedQuest[0] == NULL){
-    pango_layout_set_width(textLayout,960 * PANGO_SCALE);
-    pango_layout_set_markup(textLayout,"There is nothing to do here",-1);
-    cairo_move_to(cr,520,220);
-    pango_cairo_show_layout(cr,textLayout);
+    renderer.DrawText("There is nothing to do here",520,860,1000,40,1,1,1,1);
   } else {
-    cairo_set_source_rgba(cr,0.0,1.0,1.0,0.5);
-    cairo_rectangle(cr,515,275,900,80);
-    cairo_fill(cr);
-    cairo_set_source_rgba(cr,1.0,1.0,1.0,1.0);
-    pango_layout_set_width(textLayout,960 * PANGO_SCALE);
-    pango_layout_set_markup(textLayout,"Things you can do here:",-1);
-    cairo_move_to(cr,520,220);
-    pango_cairo_show_layout(cr,textLayout);
+    renderer.DrawPureColor(515,1415,725,805,0.0,1.0,1.0,0.5);
+    renderer.DrawText("Things you can do here:",520,860,1000,45,1,1,1,1);
     for(int i = 0;i < 5;++i){
       if(controller->displayedQuest[i] == NULL){break;}
-      pango_layout_set_markup(textLayout,controller->displayedQuest[i]->qst->title,-1);
-      cairo_move_to(cr,520,280 + i * 80);
-      pango_cairo_show_layout(cr,textLayout);
+      renderer.DrawText(controller->displayedQuest[i]->qst->title,520,790 - i * 80,1000,45,1,1,1,1);
     }
   }
 }

@@ -86,7 +86,7 @@ struct MachineGameStateMainMenu : MachineGameStateBase{
   int titleAnimFrame;
   int titleLineNo;
   int currOption;
-  const char *titleLines[7];
+  const char *titleLines[14];
 };
 
 struct MachineGame{
@@ -136,7 +136,7 @@ template<class T> void HandleRenderObjects(T * state){
   }
 }
 
-template<class T> void HandleRender2DObjects(T * state,cairo_t *cr,PangoLayout *textLayout){
+template<class T> void HandleRender2DObjects(T * state){
   auto iter = state->renderObjects.begin();
   while(iter != state->renderObjects.end()){
     if((*iter)->finished){
@@ -145,7 +145,7 @@ template<class T> void HandleRender2DObjects(T * state,cairo_t *cr,PangoLayout *
       continue;
     }
     if((*iter)->active){
-      (*iter)->Render2D(cr,textLayout);
+      (*iter)->Render2D();
     }
     ++iter;
   }

@@ -470,21 +470,11 @@ void MachineGameStateMatchGame::OnRender(){
   renderer.Flush();
   glDisable(GL_STENCIL_TEST);
   
-  renderer.BeginCairo();
-  cairo_t *cr = renderer.GUIcr;
-  PangoLayout *textLayout = renderer.pangoLayout;
-  cairo_set_operator(cr,CAIRO_OPERATOR_SOURCE);
-  cairo_set_source_rgba(cr,0.0,0.0,0.0,0.0);
-  cairo_rectangle(cr,0,0,renderer.winW,renderer.winH);
-  cairo_fill(cr);
   char scoreText[64];
   sprintf(scoreText,"Current Score: %d",currScore);
-  cairo_move_to(cr,25,25);
-  cairo_set_source_rgba(cr,0.0,1.0,0.0,1.0);
-  pango_layout_set_text(textLayout,scoreText,-1);
-  pango_cairo_show_layout(cr,textLayout);
-  HandleRender2DObjects(this,cr,textLayout);
-  renderer.EndCairo();
+  renderer.DrawText(scoreText,25,1055,800,50,0,1,0,1);
+  HandleRender2DObjects(this);
+  renderer.Flush();
   SDL_GL_SwapWindow(mainWindow);
 }
 
@@ -506,7 +496,7 @@ void MachineGameStateMatchGame::AddTempBlock(int blockID,int beginPosX,int begin
   }
 }
 
-MachineGameStateMatchGame::MachineGameStateMatchGame(GameGlobalState * const globalState) : swapSpeed(150),elimSpeed(300),upPressed(false),downPressed(false),leftPressed(false),rightPressed(false),escPressed(false),lockControl(true),canElim(false){
+MachineGameStateMatchGame::MachineGameStateMatchGame(GameGlobalState * const globalState) : swapSpeed(250),elimSpeed(600),upPressed(false),downPressed(false),leftPressed(false),rightPressed(false),escPressed(false),ctrlPressed(false),shiftPressed(false),lockControl(true),canElim(false){
   this -> globalState = globalState;
   globalState->lastState = 2;
   currScore = globalState->playerScore;
@@ -541,9 +531,9 @@ void MachineGameStateMainMenu::OnKeyDown(const SDL_KeyboardEvent &ev){
 
 int MachineGameStateMainMenu::OnLogic(int tick){
   titleAnimFrame += tick;
-  if(titleAnimFrame >= 2500){
+  if(titleAnimFrame >= 5000){
     titleAnimFrame = 0;++titleLineNo;
-    if(titleLineNo == 7){titleLineNo = 0;}
+    if(titleLineNo == 14){titleLineNo = 0;}
   }
   if(downPressed){downPressed = false;++currOption;if(currOption == 2){currOption = 0;}}
   if(upPressed){upPressed = false;--currOption;if(currOption == -1){currOption = 1;}}
@@ -557,47 +547,34 @@ int MachineGameStateMainMenu::OnLogic(int tick){
 
 void MachineGameStateMainMenu::OnRender(){
   glClear(GL_COLOR_BUFFER_BIT|GL_STENCIL_BUFFER_BIT);
-  renderer.BeginCairo();
-  cairo_t *cr = renderer.GUIcr;
-  PangoLayout *textLayout = renderer.pangoLayout;
-  cairo_set_operator(cr,CAIRO_OPERATOR_SOURCE);
-  cairo_set_source_rgba(cr,0.0,0.0,0.0,0.0);
-  cairo_rectangle(cr,0,0,renderer.winW,renderer.winH);
-  cairo_fill(cr);
   if(currOption == 1){
-    cairo_set_source_rgba(cr,0.0,1.0,0.0,1.0);
+    renderer.DrawText("Start Game",151,575,800,50,0,1,0,1);
+    renderer.DrawText("Exit Game",151,443,800,50,1,0,0,1);
   } else {
-    cairo_set_source_rgba(cr,1.0,0.0,0.0,1.0);
+    renderer.DrawText("Start Game",151,575,800,50,1,0,0,1);
+    renderer.DrawText("Exit Game",151,443,800,50,0,1,0,1);
   }
-  cairo_move_to(cr,151,505);
-  pango_layout_set_text(textLayout,"Start Game",-1);
-  pango_cairo_show_layout(cr,textLayout);
-  if(currOption == 0){
-    cairo_set_source_rgba(cr,0.0,1.0,0.0,1.0);
-  } else {
-    cairo_set_source_rgba(cr,1.0,0.0,0.0,1.0);
-  }
-  cairo_move_to(cr,151,637);
-  pango_layout_set_text(textLayout,"Exit Game",-1);
-  pango_cairo_show_layout(cr,textLayout);
-  cairo_move_to(cr,879,740 - 0.16 * titleAnimFrame);
-  cairo_set_source_rgba(cr,std::sin(((double)titleAnimFrame) / 5000 * M_PI),std::cos(((double)titleAnimFrame) /  5000 * M_PI),0.0,std::sin(((double)titleAnimFrame) / 2500 * M_PI) * 0.8 + 0.2);
-  pango_layout_set_width(textLayout,750 * PANGO_SCALE);
-  pango_layout_set_markup(textLayout,titleLines[titleLineNo],-1);
-  pango_cairo_show_layout(cr,textLayout);
-  renderer.EndCairo();
+  renderer.DrawText(titleLines[titleLineNo],879,340 + 0.05 * titleAnimFrame,750,40,std::sin(((double)titleAnimFrame) / 10000 * M_PI),std::cos(((double)titleAnimFrame) /  10000 * M_PI),0.0,std::sin(((double)titleAnimFrame) / 5000 * M_PI) * 0.8 + 0.2);
   
   SDL_GL_SwapWindow(mainWindow);
 }
 
 MachineGameStateMainMenu::MachineGameStateMainMenu(GameGlobalState* globalState) : currOption(0),downPressed(false),upPressed(false),enterPressed(false),titleLineNo(0),titleAnimFrame(0),
-			     titleLines{"<span font='24'>Slaughter and Savior: A Game by Charlie and Gilbert</span>",
-					"<span font='24'>Once upon a time there were four kingdoms</span>",
-					"<span font='24'>Each one held a part of a sacred sword that guarded the peace of their land</span>",
-					"<span font='24'>Yet as the kings grew more and more greedy</span>",
-					"<span font='24'>They were stuck in an endless war, vying for complete control over the sword</span>",
-					"<span font='24'>The war exhausted all resources on the land, collapsing the kingdoms</span>",
-					"<span font='24'>Can you find all the parts of the sacred sword, and bring peace and prosperity back to this desolate havoc?</span>"}
+			     titleLines{"Before you start the game, please read this documentation carefully.",
+					"When you enter the game, you are placed inside a large maze. You can press WASD to move around the maze, and press arrow keys to adjust the camera.",
+					"Press t to see the list of actions available in a room.",
+					"Between each two adjacent rooms there is a locked gate, which can only be opened by solving a puzzle.",
+					"We intended to create something similar to Puzzle Quest.",
+					"However we decided to add another twist to the match 3 mechanism.",
+					"At the beginning of each puzzle level there is a gray ball at the top left corner of the board.",
+					"You can only use arrow keys to swap this gray ball with its neighbors.",
+				        "You will soon discover, this is often a very inefficient way to create matches.",
+					"To compensate this we introduced another kind of moves, the cyclic swaps.",
+					"To do a clockwise cyclic swap, press Ctrl + arrow key. To do a counterclockwise cyclic swap, press Shift + arrow key.",
+			     		"Explore the patterns of cyclic swap. They will save you a lot of time.",
+					"This game is written by Charlie and Gilbert in 3 days. We are inspired by Puzzle Quest (for its match-3 puzzle), NetHack (for its procedural level generation), and Daedalus 3.3 (for its swiss army knife of maze algorithms).",
+					"This program is licensed under GNU GPL3. All assets come from free-licensed sources. All dependencies are open source libraries."
+}
 {this->globalState = globalState;}
 
 void MachineGameStateWorldmap::OnKeyDown(const SDL_KeyboardEvent &ev){
@@ -740,15 +717,8 @@ void MachineGameStateWorldmap::OnRender(){
   }
   renderer.End3D();
   
-  renderer.BeginCairo();
-  cairo_t *cr = renderer.GUIcr;
-  PangoLayout *textLayout = renderer.pangoLayout;
-  cairo_set_operator(cr,CAIRO_OPERATOR_SOURCE);
-  cairo_set_source_rgba(cr,0.0,0.0,0.0,0.0);
-  cairo_rectangle(cr,0,0,renderer.winW,renderer.winH);
-  cairo_fill(cr);
-  HandleRender2DObjects(this,cr,textLayout);
-  renderer.EndCairo();
+  HandleRender2DObjects(this);
+  renderer.Flush();
   
   SDL_GL_SwapWindow(mainWindow);
   return;

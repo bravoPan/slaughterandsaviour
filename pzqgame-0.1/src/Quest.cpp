@@ -28,10 +28,16 @@ DestroyGate::DestroyGate(int x,int y,int dir,int goal){
 }
 
 int DestroyGate::Control(MachineGameStateMatchGame *ptr,int tick){
-  if(ptr->currScore >= ptr->globalState->goalScore && stage == 1){
+  if(stage == 1){++stage;return 0;}
+  
+  if(ptr->currScore >= ptr->globalState->goalScore && stage == 2){
     ++stage;
   }
   return 0;
+}
+
+int DestroyGate::Control(MachineGameStateMainMenu *ptr,int tick){
+  if(stage == 1){stage = 0;}
 }
 
 int DestroyGate::Control(MachineGameStateWorldmap *ptr,int tick){
@@ -48,7 +54,7 @@ int DestroyGate::Control(MachineGameStateWorldmap *ptr,int tick){
     return 0;
   }
 
-  if(stage == 2){
+  if(stage == 3){
     ptr->fposX = animPosX - 36;
     ptr->fposY = animPosY - 36;
     ptr->posX = animPosX - 36;
@@ -61,7 +67,7 @@ int DestroyGate::Control(MachineGameStateWorldmap *ptr,int tick){
     return 0;
   }
 
-  if(stage == 3){
+  if(stage == 4){
     animFrame += tick;
     if(animFrame >= 1000){
       animFrame = 1000;

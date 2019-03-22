@@ -90,6 +90,9 @@ void MachineGame::Initiate(){
     }
   }
 
+  globalState.neun = new NeuNetwork;
+  globalState.neun->ReadData();
+
   MazeGen();
 }
 
@@ -347,6 +350,96 @@ int MachineGameStateMatchGame::OnLogic(int tick){
     }
   }
 
+  if(currScore > globalState->goalScore && !lockControl){
+    lockControl = true;
+    MatchGameVictoryAnim *ptr = new MatchGameVictoryAnim;
+    injections.push_back(ptr);
+    renderObjects.push_back(ptr->render);
+  }
+  if(currScore > globalState->goalScore + 500){
+    canElim = false;
+  }
+
+  if(!lockControl && board[posX][posY] != -1){
+    int move = -1;
+    if(aiControlled){
+      move = globalState->neun->Choose(board);
+      remSteps -= 1;
+    } else {
+      if(upPressed || downPressed || leftPressed || rightPressed){remSteps -= 1;}
+      if(!ctrlPressed && !shiftPressed){
+	if(upPressed){move = 0;}
+	if(downPressed){move = 1;}
+	if(leftPressed){move = 2;}
+	if(rightPressed){move = 3;}
+      } else if(ctrlPressed){
+	if(upPressed){move = 5;}
+	if(downPressed){move = 7;}
+	if(leftPressed){move = 6;}
+	if(rightPressed){move = 4;}
+      } else{
+	if(upPressed){move = 10;}
+	if(downPressed){move = 8;}
+	if(leftPressed){move = 9;}
+	if(rightPressed){move = 11;}
+      }
+    }
+    if(move == 0 && posX >= 1 && !(board[posX - 1][posY] == -1 && !boardEmpty[posX - 1][posY])){
+      boardEmpty[posX][posY] = boardEmpty[posX - 1][posY] = true;
+      AddTempBlock(board[posX][posY],posX,posY,posX - 1,posY,swapSpeed);
+      AddTempBlock(board[posX - 1][posY],posX - 1,posY,posX,posY,swapSpeed);
+      board[posX][posY] = board[posX - 1][posY] = -1;
+      --posX;
+    }
+    if(move == 1 && posX <= 6 && !(board[posX + 1][posY] == -1 && !boardEmpty[posX + 1][posY])){
+      boardEmpty[posX][posY] = boardEmpty[posX + 1][posY] = true;
+      AddTempBlock(board[posX][posY],posX,posY,posX + 1,posY,swapSpeed);
+      AddTempBlock(board[posX + 1][posY],posX + 1,posY,posX,posY,swapSpeed);
+      board[posX][posY] = board[posX + 1][posY] = -1;
+      ++posX;
+    }
+    if(move == 2 && posY >= 1 && !(board[posX][posY - 1] == -1 && !boardEmpty[posX][posY - 1])){
+      boardEmpty[posX][posY] = boardEmpty[posX][posY - 1] = true;
+      AddTempBlock(board[posX][posY],posX,posY,posX,posY - 1,swapSpeed);
+      AddTempBlock(board[posX][posY - 1],posX,posY - 1,posX,posY,swapSpeed);
+      board[posX][posY] = board[posX][posY - 1] = -1;
+      --posY;
+    }
+    if(move == 3 && posY <= 6 && !(board[posX][posY + 1] == -1 && !boardEmpty[posX][posY + 1])){
+      boardEmpty[posX][posY] = boardEmpty[posX][posY + 1] = true;
+      AddTempBlock(board[posX][posY],posX,posY,posX,posY + 1,swapSpeed);
+      AddTempBlock(board[posX][posY + 1],posX,posY + 1,posX,posY,swapSpeed);
+      board[posX][posY] = board[posX][posY + 1] = -1;
+      ++posY;
+    }
+    if(move == 5){
+      CyclicMove(1,3);
+      //upPressed = false;
+    } else if(move == 7){
+      CyclicMove(1,1);
+      //downPressed = false;
+    } else if(move == 6){
+      CyclicMove(1,2);
+      //leftPressed = false;
+    } else if(move == 4){
+      CyclicMove(1,0);
+      //rightPressed = false;
+    }
+    if(move == 10){
+      CyclicMove(0,2);
+      //upPressed = false;
+    } else if(move == 8){
+      CyclicMove(0,0);
+      //downPressed = false;
+    } else if(move == 9){
+      CyclicMove(0,1);
+      //leftPressed = false;
+    } else if(move == 11){
+      CyclicMove(0,3);
+      //rightPressed = false;
+    }
+  }
+
   for(int i = 6;i >= 0;--i){
     for(int j = 0;j < 8;++j){
       if(board[i][j] == -1){continue;}
@@ -369,74 +462,10 @@ int MachineGameStateMatchGame::OnLogic(int tick){
     }
   }
 
-  if(currScore > globalState->goalScore && !lockControl){
-    lockControl = true;
-    MatchGameVictoryAnim *ptr = new MatchGameVictoryAnim;
-    injections.push_back(ptr);
-    renderObjects.push_back(ptr->render);
+  if(remSteps == 0){
+    aiControlled = !aiControlled;
+    remSteps = 3;
   }
-
-  if(!lockControl && board[posX][posY] != -1){
-    if(!ctrlPressed && !shiftPressed){
-      if(upPressed && posX >= 1 && !(board[posX - 1][posY] == -1 && !boardEmpty[posX - 1][posY])){
-	boardEmpty[posX][posY] = boardEmpty[posX - 1][posY] = true;
-	AddTempBlock(board[posX][posY],posX,posY,posX - 1,posY,swapSpeed);
-	AddTempBlock(board[posX - 1][posY],posX - 1,posY,posX,posY,swapSpeed);
-	board[posX][posY] = board[posX - 1][posY] = -1;
-	--posX;
-      }
-      if(downPressed && posX <= 6 && !(board[posX + 1][posY] == -1 && !boardEmpty[posX + 1][posY])){
-	boardEmpty[posX][posY] = boardEmpty[posX + 1][posY] = true;
-	AddTempBlock(board[posX][posY],posX,posY,posX + 1,posY,swapSpeed);
-	AddTempBlock(board[posX + 1][posY],posX + 1,posY,posX,posY,swapSpeed);
-	board[posX][posY] = board[posX + 1][posY] = -1;
-	++posX;
-      }
-      if(leftPressed && posY >= 1 && !(board[posX][posY - 1] == -1 && !boardEmpty[posX][posY - 1])){
-	boardEmpty[posX][posY] = boardEmpty[posX][posY - 1] = true;
-	AddTempBlock(board[posX][posY],posX,posY,posX,posY - 1,swapSpeed);
-	AddTempBlock(board[posX][posY - 1],posX,posY - 1,posX,posY,swapSpeed);
-	board[posX][posY] = board[posX][posY - 1] = -1;
-	--posY;
-      }
-      if(rightPressed && posY <= 6 && !(board[posX][posY + 1] == -1 && !boardEmpty[posX][posY + 1])){
-	boardEmpty[posX][posY] = boardEmpty[posX][posY + 1] = true;
-	AddTempBlock(board[posX][posY],posX,posY,posX,posY + 1,swapSpeed);
-	AddTempBlock(board[posX][posY + 1],posX,posY + 1,posX,posY,swapSpeed);
-	board[posX][posY] = board[posX][posY + 1] = -1;
-	++posY;
-      }
-    } else if(ctrlPressed){
-      if(upPressed){
-	CyclicMove(1,3);
-	upPressed = false;
-      } else if(downPressed){
-	CyclicMove(1,1);
-	downPressed = false;
-      } else if(leftPressed){
-	CyclicMove(1,2);
-	leftPressed = false;
-      } else if(rightPressed){
-	CyclicMove(1,0);
-	rightPressed = false;
-      }
-    } else if(shiftPressed){
-      if(upPressed){
-	CyclicMove(0,2);
-	upPressed = false;
-      } else if(downPressed){
-	CyclicMove(0,0);
-	downPressed = false;
-      } else if(leftPressed){
-	CyclicMove(0,1);
-	leftPressed = false;
-      } else if(rightPressed){
-	CyclicMove(0,3);
-	rightPressed = false;
-      }
-    }
-  }
-
   if(globalState->inQuest){globalState->currQuest->Control(this,tick);}
   return HandleInjections(this,tick);
 }
@@ -496,7 +525,7 @@ void MachineGameStateMatchGame::AddTempBlock(int blockID,int beginPosX,int begin
   }
 }
 
-MachineGameStateMatchGame::MachineGameStateMatchGame(GameGlobalState * const globalState) : swapSpeed(250),elimSpeed(600),upPressed(false),downPressed(false),leftPressed(false),rightPressed(false),escPressed(false),ctrlPressed(false),shiftPressed(false),lockControl(true),canElim(false){
+MachineGameStateMatchGame::MachineGameStateMatchGame(GameGlobalState * const globalState) : swapSpeed(250),elimSpeed(600),upPressed(false),downPressed(false),leftPressed(false),rightPressed(false),escPressed(false),ctrlPressed(false),shiftPressed(false),lockControl(true),canElim(false),aiControlled(true),remSteps(3){
   this -> globalState = globalState;
   globalState->lastState = 2;
   currScore = globalState->playerScore;
@@ -542,6 +571,8 @@ int MachineGameStateMainMenu::OnLogic(int tick){
     if(currOption == 0){return globalState->lastState;}
     if(currOption == 1){quitGame = true;}
   }
+
+  if(globalState->inQuest){globalState->currQuest->Control(this,tick);}
   return 0;
 }
 

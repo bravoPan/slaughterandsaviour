@@ -42,6 +42,8 @@ struct MachineGameStateMatchGame : MachineGameStateBase{
   int posX,posY;
   int board[8][8];
   bool boardEmpty[8][8];
+  bool aiControlled;
+  int remSteps;
 
   struct TemporaryBlock{
     int blockID,posX,posY,destPosX,destPosY,animFrame,totalFrame;

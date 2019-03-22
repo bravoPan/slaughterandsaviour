@@ -105,7 +105,8 @@ am_PZQGame_OBJECTS = main.$(OBJEXT) MachineInjection.$(OBJEXT) \
 	Dialogue.$(OBJEXT) Quest.$(OBJEXT) Renderer.$(OBJEXT) \
 	AudioEngine.$(OBJEXT) GlobalObjects.$(OBJEXT) \
 	GeomModel.$(OBJEXT) MachineGame.$(OBJEXT) \
-	DisjointSet.$(OBJEXT) Sprite.$(OBJEXT) Font.$(OBJEXT)
+	DisjointSet.$(OBJEXT) Sprite.$(OBJEXT) Font.$(OBJEXT) \
+	AI.$(OBJEXT)
 PZQGame_OBJECTS = $(am_PZQGame_OBJECTS)
 PZQGame_LDADD = $(LDADD)
 PZQGame_DEPENDENCIES =
@@ -280,9 +281,9 @@ target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-LDADD = -lavcodec -lavformat -lavutil -lswresample @DEPENDENCIES_LIBS@
+LDADD = @DEPENDENCIES_LIBS@
 AM_CPPFLAGS = @DEPENDENCIES_CFLAGS@
-PZQGame_SOURCES = main.cpp MachineInjection.cpp Dialogue.cpp Quest.cpp Renderer.cpp AudioEngine.cpp GlobalObjects.cpp GeomModel.cpp MachineGame.cpp DisjointSet.cpp Sprite.cpp Font.cpp common.h MachineInjection.h Dialogue.h Quest.h Renderer.h AudioEngine.h GlobalObjects.h GeomModel.h MachineGame.h DisjointSet.h Sprite.h GameGlobalState.h Font.h
+PZQGame_SOURCES = main.cpp MachineInjection.cpp Dialogue.cpp Quest.cpp Renderer.cpp AudioEngine.cpp GlobalObjects.cpp GeomModel.cpp MachineGame.cpp DisjointSet.cpp Sprite.cpp Font.cpp AI.cpp common.h MachineInjection.h Dialogue.h Quest.h Renderer.h AudioEngine.h GlobalObjects.h GeomModel.h MachineGame.h DisjointSet.h Sprite.h GameGlobalState.h Font.h AI.h
 EXTRA_DIST = glm
 all: all-am
 
@@ -370,6 +371,7 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/AI.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/AudioEngine.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/Dialogue.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/DisjointSet.Po@am__quote@

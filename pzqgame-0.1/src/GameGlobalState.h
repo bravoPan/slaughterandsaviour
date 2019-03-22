@@ -1,6 +1,8 @@
 #ifndef PZQGAME_GAMEGLOBALSTATE_H
 #define PZQGAME_GAMEGLOBALSTATE_H
 
+#include "AI.h"
+
 struct Quest;
 struct QuestList;
 
@@ -17,6 +19,7 @@ struct GameGlobalState{
   double xyRot,yawn;
 
   //For Matchgame
+  NeuNetwork * neun;
   int goalScore;
 
   //For quest
